@@ -1,0 +1,22 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: example
+spec:
+  containers:
+  - name: example
+    image: busybox
+    command:
+      - "/bin/sh"
+    args:
+      - "-c"
+      - "whoami && touch /mnt/SUCCESS && exit 0 || exit 1"
+    volumeMounts:
+      - name: zfs
+        mountPath: "/mnt"
+  restartPolicy: "Never"
+  volumes:
+    - name: zfs
+      persistentVolumeClaim:
+        claimName: example
