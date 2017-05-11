@@ -31,7 +31,7 @@ func main() {
 
 	viper.SetDefault("zpool_mount_prefix", "/")
 	viper.SetDefault("zpool", "storage")
-	viper.SetDefault("parent", "kubernetes/pv")
+	viper.SetDefault("parent_dataset", "kubernetes/pv")
 	viper.SetDefault("share_subnet", "10.0.0.0/8")
 	viper.SetDefault("share_options", "")
 	viper.SetDefault("hostname", "")
