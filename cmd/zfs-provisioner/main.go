@@ -34,7 +34,7 @@ func main() {
 	viper.SetDefault("parent_dataset", "kubernetes/pv")
 	viper.SetDefault("share_subnet", "10.0.0.0/8")
 	viper.SetDefault("share_options", "")
-	viper.SetDefault("hostname", "")
+	viper.SetDefault("server_hostname", "")
 	viper.SetDefault("kube_conf", "kube.conf")
 
 	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_conf"))

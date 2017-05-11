@@ -11,10 +11,10 @@ The provisioner can be configured via the following environment variables:
 | :------: | :---------- | :-----: |
 | `ZFS_ZPOOL` | The zpool in which datasets will be created. | `storage` |
 | `ZFS_ZPOOL_MOUNT_PREFIX` | The path under which the zpool is mounted. Usually not changed. | `/` |
-| `ZFS_PARENT` | The parent dataset in which datasets will be created, needs to exist beforehand. No leading or trailing slashes. | `kubernetes/pv` |
+| `ZFS_PARENT_DATASET` | The parent dataset in which datasets will be created, needs to exist beforehand. No leading or trailing slashes. | `kubernetes/pv` |
 | `ZFS_SHARE_SUBNET` | The subnet to which volumes will be exported. | `10.0.0.0/8` |
 | `ZFS_SHARE_OPTIONS` | Additional nfs share options, comma-separated. | |
-| `ZFS_HOSTNAME` | The hostname or ip which the pods should use to mount the volume. Determined via `hostname -f` if empty. | |
+| `ZFS_SERVER_HOSTNAME` | The hostname or ip which the pods should use to mount the volume. Determined via `hostname -f` if empty. | |
 | `ZFS_KUBE_CONF` | Path to the kubernetes config file which will be used to connect to the cluster. |`kube.conf` |
 
 ## Development
