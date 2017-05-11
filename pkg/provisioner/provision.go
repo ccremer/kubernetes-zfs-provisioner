@@ -45,6 +45,8 @@ func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persist
 			},
 		},
 	}
+	log.Debug("Returning pv:")
+	log.Debug(*pv)
 
 	return pv, nil
 }

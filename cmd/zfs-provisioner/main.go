@@ -36,6 +36,11 @@ func main() {
 	viper.SetDefault("share_options", "")
 	viper.SetDefault("server_hostname", "")
 	viper.SetDefault("kube_conf", "kube.conf")
+	viper.SetDefault("debug", false)
+
+	if viper.GetBool("debug") == true {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_conf"))
 	if err != nil {
@@ -75,7 +80,7 @@ func main() {
 	}
 
 	// Create the provisioner and start the controller
-	zfsProvisioner := provisioner.NewZFSProvisioner(viper.GetString("zpool"), viper.GetString("zpool_mount_prefix"), viper.GetString("parent_dataset"), viper.GetString("share_options"), viper.GetString("share_subnet"), viper.GetString("server"))
+	zfsProvisioner := provisioner.NewZFSProvisioner(viper.GetString("zpool"), viper.GetString("zpool_mount_prefix"), viper.GetString("parent_dataset"), viper.GetString("share_options"), viper.GetString("share_subnet"), viper.GetString("server_hostname"))
 	pc := controller.NewProvisionController(clientset, 15*time.Second, provisionerName, zfsProvisioner, serverVersion.GitVersion, false, 2, leasePeriod, renewDeadline, retryPeriod, termLimit)
 	log.Info("Listening for events")
 	pc.Run(wait.NeverStop)
