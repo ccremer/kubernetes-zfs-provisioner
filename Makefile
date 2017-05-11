@@ -11,5 +11,5 @@ clean:
 
 build: 
 	mkdir -p bin
-	 go build -o zfs-provisioner cmd/zfs-provisioner/main.go
+	env GOOS=linux go build -o bin/zfs-provisioner cmd/zfs-provisioner/main.go
 .PHONY: build
