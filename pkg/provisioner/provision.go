@@ -65,6 +65,13 @@ func (p ZFSProvisioner) createVolume(options controller.VolumeOptions) (string, 
 		return "", fmt.Errorf("Creating ZFS dataset failed with: %v", err.Error())
 	}
 
-	mountPath := p.mountPrefix + "/" + zfsPath
+	// Avoid double slashes
+	var mountPath string
+	if p.mountPrefix == "/" {
+		mountPath = p.mountPrefix + zfsPath
+	} else {
+		mountPath = p.mountPrefix + "/" + zfsPath
+	}
+
 	return mountPath, nil
 }
