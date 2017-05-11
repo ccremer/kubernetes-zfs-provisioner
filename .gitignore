@@ -16,5 +16,4 @@ vendor
 *.img
 test
 bin
-zfs-provisioner
 .vscode
