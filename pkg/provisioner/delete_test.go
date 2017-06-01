@@ -11,7 +11,7 @@ import (
 )
 
 func TestDelete(t *testing.T) {
-	p := NewZFSProvisioner("test", "", "volumes", "", "127.0.0.1", "")
+	p := NewZFSProvisioner("test", "", "volumes", "", "127.0.0.1", "", "Retain")
 	options := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
 		PVName: "pv-testdelete",
