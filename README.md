@@ -15,7 +15,12 @@ The provisioner can be configured via the following environment variables:
 | `ZFS_SHARE_SUBNET` | The subnet to which volumes will be exported. | `10.0.0.0/8` |
 | `ZFS_SHARE_OPTIONS` | Additional nfs share options, comma-separated. | |
 | `ZFS_SERVER_HOSTNAME` | The hostname or ip which the pods should use to mount the volume. Determined via `hostname -f` if empty. | |
+| `ZFS_KUBE_RECLAIM_POLICY` | The reclaim policy to use, currently either `Delete` or `Retain`. |`Delete` |
 | `ZFS_KUBE_CONF` | Path to the kubernetes config file which will be used to connect to the cluster. |`kube.conf` |
+
+## Notes
+### Reclaim policy
+This provisioner currently supports the `Delete` or `Retain` reclaim policy. Until [kubernetes/#38192](https://github.com/kubernetes/kubernetes/issues/38192) is resolved, this is configured per provisioner via an environment variable. To use both, run two instances of the provisioner and configure different storage classes.
 
 ## Development
 
