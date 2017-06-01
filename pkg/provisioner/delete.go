@@ -28,7 +28,7 @@ func (p ZFSProvisioner) deleteVolume(volume *v1.PersistentVolume) error {
 		return fmt.Errorf("Retrieving ZFS dataset for deletion failed with: %v", err.Error())
 	}
 
-	err = dataset.Destroy(zfs.DestroyDefault)
+	err = dataset.Destroy(zfs.DestroyRecursive)
 	if err != nil {
 		return fmt.Errorf("Deleting ZFS dataset failed with: %v", err.Error())
 	}
