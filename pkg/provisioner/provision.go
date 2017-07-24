@@ -59,8 +59,8 @@ func (p ZFSProvisioner) createVolume(options controller.VolumeOptions) (string, 
 	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", p.shareSubnet, p.shareOptions)
 
 	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
-	properties["quota"] = storageRequest.String()
-	properties["reservation"] = storageRequest.String()
+	properties["refquota"] = storageRequest.String()
+	properties["refreservation"] = storageRequest.String()
 
 	_, err := zfs.CreateFilesystem(zfsPath, properties)
 	if err != nil {
