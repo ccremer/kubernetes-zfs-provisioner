@@ -2,7 +2,7 @@
 
 zfs-provisioner is an out of cluster external provisioner for Kubernetes. It creates ZFS datasets and shares them via NFS to make them mountable to pods. Currently all ZFS attributes are inherited from the parent dataset, different storage classes for e.g. cached/non-cached datasets or manually setting attributes via annotations should follow in the future. This provisioner is considered highly **experimental** and is still under development.
 
- For more information about external storage in kubernetes, see [kubernetes-incubator/external-storage](https://github.com/kubernetes-incubator/external-storage).
+For more information about external storage in kubernetes, see [kubernetes-incubator/external-storage](https://github.com/kubernetes-incubator/external-storage).
 
 ## Usage
 The provisioner can be configured via the following environment variables:
@@ -21,6 +21,9 @@ The provisioner can be configured via the following environment variables:
 ## Notes
 ### Reclaim policy
 This provisioner currently supports the `Delete` or `Retain` reclaim policy. Until [kubernetes/#38192](https://github.com/kubernetes/kubernetes/issues/38192) is resolved, this is configured per provisioner via an environment variable. To use both, run two instances of the provisioner and configure different storage classes.
+
+### Storage space
+The provisioner uses the `reflimit` and `refquota` ZFS attributes to limit storage space for volumes. Each volume can not use more storage space than the given resource request and also reserves exactly that much. This means that over provisioning is not possible. Snapshots **do not** account for the storage space limit. See Oracles [ZFS Administration Guide](https://docs.oracle.com/cd/E23823_01/html/819-5461/gazvb.html) for more information.
 
 ## Development
 
