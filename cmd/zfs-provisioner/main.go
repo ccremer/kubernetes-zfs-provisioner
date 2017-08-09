@@ -21,8 +21,6 @@ const (
 	retryPeriod   = controller.DefaultRetryPeriod
 	renewDeadline = controller.DefaultRenewDeadline
 	termLimit     = controller.DefaultTermLimit
-
-	provisionerName = "gentics.com/zfs"
 )
 
 func main() {
@@ -37,10 +35,18 @@ func main() {
 	viper.SetDefault("server_hostname", "")
 	viper.SetDefault("kube_conf", "kube.conf")
 	viper.SetDefault("kube_reclaim_policy", "Delete")
+	viper.SetDefault("provisioner_name", "gentics.com/zfs")
 	viper.SetDefault("debug", false)
 
 	if viper.GetBool("debug") == true {
 		log.SetLevel(log.DebugLevel)
+	}
+
+	// Ensure provisioner name is valid
+	if errs := validateProvisionerName(viper.GetString("provisioner_name"), field.NewPath("provisioner")); len(errs) != 0 {
+		log.WithFields(log.Fields{
+			"errors": errs,
+		}).Fatal("Invalid provisioner name specified")
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_conf"))
@@ -82,11 +88,13 @@ func main() {
 
 	// Create the provisioner and start the controller
 	zfsProvisioner := provisioner.NewZFSProvisioner(viper.GetString("zpool"), viper.GetString("zpool_mount_prefix"), viper.GetString("parent_dataset"), viper.GetString("share_options"), viper.GetString("share_subnet"), viper.GetString("server_hostname"), viper.GetString("kube_reclaim_policy"))
-	pc := controller.NewProvisionController(clientset, 15*time.Second, provisionerName, zfsProvisioner, serverVersion.GitVersion, false, 2, leasePeriod, renewDeadline, retryPeriod, termLimit)
+	pc := controller.NewProvisionController(clientset, 15*time.Second, viper.GetString("provisioner_name"), zfsProvisioner, serverVersion.GitVersion, false, 2, leasePeriod, renewDeadline, retryPeriod, termLimit)
 	log.Info("Listening for events")
 	pc.Run(wait.NeverStop)
 }
 
+// validateProvisioner tests if provisioner is a valid qualified name.
+// https://github.com/kubernetes/kubernetes/blob/release-1.4/pkg/apis/storage/validation/validation.go
 func validateProvisionerName(provisioner string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if len(provisioner) == 0 {
