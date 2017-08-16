@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
+	zfs "github.com/mistifyio/go-zfs"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +13,8 @@ import (
 )
 
 func TestProvision(t *testing.T) {
-	p := NewZFSProvisioner("test", "", "volumes", "", "127.0.0.1", "", "Delete")
+	parent, _ := zfs.GetDataset("test/volumes")
+	p := NewZFSProvisioner(parent, "", "127.0.0.1", "", "Delete")
 
 	options := controller.VolumeOptions{
 		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
@@ -22,7 +24,7 @@ func TestProvision(t *testing.T) {
 	pv, err := p.Provision(options)
 
 	assert.NoError(t, err, "Provision should not return an error")
-	_, err = os.Stat(os.Getenv("GOPATH") + "/src/git.gentics.com/psc/kubernetes-zfs-provisioner/" + pv.Spec.PersistentVolumeSource.NFS.Path)
+	_, err = os.Stat(pv.Spec.PersistentVolumeSource.NFS.Path)
 	assert.NoError(t, err, "The volume should exist on disk")
 }
 

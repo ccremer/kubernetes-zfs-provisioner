@@ -2,6 +2,7 @@ package provisioner
 
 import "github.com/kubernetes-incubator/external-storage/lib/controller"
 import "k8s.io/client-go/pkg/api/v1"
+import zfs "github.com/mistifyio/go-zfs"
 
 const (
 	annCreatedBy = "kubernetes.io/createdby"
@@ -10,9 +11,7 @@ const (
 
 // ZFSProvisioner implements the Provisioner interface to create and export ZFS volumes
 type ZFSProvisioner struct {
-	zpool         string // The Zpool in which to create volume
-	mountPrefix   string // The path where the zpool is mounted, e.g. /Volumes/ under MacOS
-	parentDataset string // The parent dataset under which tho create volumes
+	parent *zfs.Dataset // The parent dataset
 
 	shareOptions   string // Additional nfs export options, comma-separated
 	shareSubnet    string // The subnet to which the volumes will be exported
@@ -21,7 +20,7 @@ type ZFSProvisioner struct {
 }
 
 // NewZFSProvisioner returns a new ZFSProvisioner
-func NewZFSProvisioner(zpool string, mountPrefix string, parentDataset string, shareOptions string, shareSubnet string, serverHostname string, reclaimPolicy string) controller.Provisioner {
+func NewZFSProvisioner(parent *zfs.Dataset, shareOptions string, shareSubnet string, serverHostname string, reclaimPolicy string) controller.Provisioner {
 	// Prepend a comma if additional options are given
 	if shareOptions != "" {
 		shareOptions = "," + shareOptions
@@ -37,9 +36,7 @@ func NewZFSProvisioner(zpool string, mountPrefix string, parentDataset string, s
 	}
 
 	return ZFSProvisioner{
-		zpool:         zpool,
-		mountPrefix:   mountPrefix,
-		parentDataset: parentDataset,
+		parent: parent,
 
 		shareOptions:   shareOptions,
 		shareSubnet:    shareSubnet,

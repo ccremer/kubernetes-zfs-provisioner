@@ -2,6 +2,7 @@ package provisioner
 
 import (
 	"fmt"
+	"regexp"
 
 	log "github.com/Sirupsen/logrus"
 	zfs "github.com/mistifyio/go-zfs"
@@ -23,7 +24,27 @@ func (p ZFSProvisioner) Delete(volume *v1.PersistentVolume) error {
 
 // deleteVolume deletes a ZFS dataset from the server
 func (p ZFSProvisioner) deleteVolume(volume *v1.PersistentVolume) error {
-	dataset, err := zfs.GetDataset(p.zpool + "/" + p.parentDataset + "/" + volume.Name)
+	children, err := p.parent.Children(0)
+	if err != nil {
+		return fmt.Errorf("Retrieving ZFS dataset for deletion failed with: %v", err.Error())
+	}
+
+	var dataset *zfs.Dataset
+	for _, child := range children {
+		if child.Type != "filesystem" {
+			continue
+		}
+
+		matched, _ := regexp.MatchString(`.+\/`+volume.Name, child.Name)
+		if matched {
+			dataset = child
+			break
+		}
+	}
+	if dataset == nil {
+		err = fmt.Errorf("Volume %v could not be found", &volume)
+	}
+
 	if err != nil {
 		return fmt.Errorf("Retrieving ZFS dataset for deletion failed with: %v", err.Error())
 	}

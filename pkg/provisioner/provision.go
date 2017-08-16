@@ -53,7 +53,7 @@ func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persist
 
 // createVolume creates a ZFS dataset and returns its mount path
 func (p ZFSProvisioner) createVolume(options controller.VolumeOptions) (string, error) {
-	zfsPath := p.zpool + "/" + p.parentDataset + "/" + options.PVName
+	zfsPath := p.parent.Name + "/" + options.PVName
 	properties := make(map[string]string)
 
 	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", p.shareSubnet, p.shareOptions)
@@ -62,18 +62,10 @@ func (p ZFSProvisioner) createVolume(options controller.VolumeOptions) (string, 
 	properties["refquota"] = storageRequest.String()
 	properties["refreservation"] = storageRequest.String()
 
-	_, err := zfs.CreateFilesystem(zfsPath, properties)
+	dataset, err := zfs.CreateFilesystem(zfsPath, properties)
 	if err != nil {
 		return "", fmt.Errorf("Creating ZFS dataset failed with: %v", err.Error())
 	}
 
-	// Avoid double slashes
-	var mountPath string
-	if p.mountPrefix == "/" {
-		mountPath = p.mountPrefix + zfsPath
-	} else {
-		mountPath = p.mountPrefix + "/" + zfsPath
-	}
-
-	return mountPath, nil
+	return dataset.Mountpoint, nil
 }
