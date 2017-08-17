@@ -5,7 +5,7 @@ import (
 	"regexp"
 
 	log "github.com/Sirupsen/logrus"
-	zfs "github.com/mistifyio/go-zfs"
+	zfs "github.com/simt2/go-zfs"
 	"k8s.io/client-go/pkg/api/v1"
 )
 

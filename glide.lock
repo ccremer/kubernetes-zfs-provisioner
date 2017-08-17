@@ -1,5 +1,5 @@
-hash: 23df9e9f423a367e18ba593a3c1d31c367bb6b83865e070702957f14c5c23817
-updated: 2017-08-16T10:35:45.067864796+02:00
+hash: 31e0be50ca2d1da935b6c7acbc1eec52a81de30759a0a45b4cc83d8a53174c1b
+updated: 2017-08-17T13:13:39.421708076+02:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -87,8 +87,6 @@ imports:
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
-- name: github.com/mistifyio/go-zfs
-  version: 386bffe89f421c8509066037225e1c0fda6b4933
 - name: github.com/mitchellh/mapstructure
   version: db1efb556f84b25a0a13a04aad883943538ad2e0
 - name: github.com/pborman/uuid
@@ -105,6 +103,7 @@ imports:
   version: c5b7fccd204277076155f10851dad72b76a49317
   subpackages:
   - prometheus
+  - prometheus/promhttp
 - name: github.com/prometheus/client_model
   version: fa8ad6fec33561be4280a8f0514318c79d7f6cb6
   subpackages:
@@ -120,6 +119,8 @@ imports:
   version: 8a290539e2e8629dbc4e6bad948158f790ec31f4
 - name: github.com/PuerkitoBio/urlesc
   version: 5bd2802263f21d8788851d5305584c82a5c75d7e
+- name: github.com/simt2/go-zfs
+  version: 1716e0f6768bfdedb714a35e56b78c479d8080fa
 - name: github.com/Sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/spf13/afero

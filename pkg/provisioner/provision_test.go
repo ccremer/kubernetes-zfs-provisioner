@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
-	zfs "github.com/mistifyio/go-zfs"
+	zfs "github.com/simt2/go-zfs"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

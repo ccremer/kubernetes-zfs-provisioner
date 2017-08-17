@@ -16,6 +16,7 @@ The provisioner can be configured via the following environment variables:
 | `ZFS_PROVISIONER_NAME` | Name of the provisioner. Change only if you want to run multiple instances. | `gentics.com/zfs` |
 | `ZFS_KUBE_RECLAIM_POLICY` | The reclaim policy to use, currently either `Delete` or `Retain`. |`Delete` |
 | `ZFS_KUBE_CONF` | Path to the kubernetes config file which will be used to connect to the cluster. |`kube.conf` |
+| `ZFS_METRICS_PORT` | Port on which to export Prometheus metrics. | `8080` |
 
 ## Notes
 ### Reclaim policy
