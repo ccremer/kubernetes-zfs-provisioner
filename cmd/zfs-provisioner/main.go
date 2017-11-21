@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"git.gentics.com/psc/kubernetes-zfs-provisioner/pkg/provisioner"
 	log "github.com/Sirupsen/logrus"
+	"github.com/gentics/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/kubernetes-incubator/external-storage/lib/controller"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
