@@ -37,4 +37,26 @@ hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount disk.img
 # Create zpool with mount in current directory
 sudo zpool create -m (pwd)/test -f test /dev/disk2
 ```
-For development under other operating systems, adapt mount command and block device. 
+For development under other operating systems, adapt mount command and block device.
+
+## Building
+
+You need GO and go-dep
+
+```
+sudo apt install golang-go go-dep
+
+# If $GOPATH is empty
+mkdir -p ~/go
+export GOPATH=$HOME/go
+
+mkdir -p $GOPATH/src
+ln -s $PATH_TO_REPO $GOPATH/src/kubernetes-zfs-provisioner
+cd $GOPATH/src/kubernetes-zfs-provisioner
+
+# Install dependencices
+dep ensure
+
+# Build
+make build
+```
