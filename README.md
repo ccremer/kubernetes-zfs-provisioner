@@ -10,8 +10,7 @@ The provisioner can be configured via the following environment variables:
 | Variable | Description | Default |
 | :------: | :---------- | :-----: |
 | `ZFS_PARENT_DATASET` | The parent dataset in which datasets will be created, needs to exist beforehand. No leading or trailing slashes. Mandatory. | |
-| `ZFS_SHARE_SUBNET` | The subnet to which volumes will be exported. | `10.0.0.0/8` |
-| `ZFS_SHARE_OPTIONS` | Additional nfs share options, comma-separated. | |
+| `ZFS_SHARE_OPTIONS` | Additional nfs share options, comma-separated. | `rw=@10.0.0.0/8` |
 | `ZFS_SERVER_HOSTNAME` | The hostname or ip which the pods should use to mount the volume. Determined via `hostname -f` if empty. | |
 | `ZFS_PROVISIONER_NAME` | Name of the provisioner. Change only if you want to run multiple instances. | `gentics.com/zfs` |
 | `ZFS_KUBE_RECLAIM_POLICY` | The reclaim policy to use, currently either `Delete` or `Retain`. |`Delete` |
@@ -32,10 +31,22 @@ The tests need to manage ZFS datasets, create a testing pool on a disk image:
 ```
 # Create a 10GB disk image
 dd if=/dev/zero bs=1024m count=10 of=disk.img
+```
+
+### Linux
+
+```
+runcate --size 1G disk1.img
+sudo zpool create pool1 $PWD/disk1.img -m $PWD/test
+```
+
+### Mac
+
+```
 # Mount the image as a block device, MacOS way
 hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount disk.img
 # Create zpool with mount in current directory
-sudo zpool create -m (pwd)/test -f test /dev/disk2
+sudo zpool create -m $PWD/test -f test /dev/disk2
 ```
 For development under other operating systems, adapt mount command and block device.
 
@@ -54,7 +65,7 @@ mkdir -p $GOPATH/src
 ln -s $PATH_TO_REPO $GOPATH/src/kubernetes-zfs-provisioner
 cd $GOPATH/src/kubernetes-zfs-provisioner
 
-# Install dependencices
+# Install dependencies
 dep ensure
 
 # Build

@@ -57,7 +57,7 @@ func (p ZFSProvisioner) createVolume(options controller.VolumeOptions) (string, 
 	zfsPath := p.parent.Name + "/" + options.PVName
 	properties := make(map[string]string)
 
-	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", p.shareSubnet, p.shareOptions)
+	properties["sharenfs"] = p.shareOptions
 
 	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	storageRequestBytes := strconv.FormatInt(storageRequest.Value(), 10)

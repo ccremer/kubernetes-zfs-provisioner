@@ -33,8 +33,7 @@ func main() {
 	viper.AutomaticEnv()
 
 	viper.SetDefault("parent_dataset", "")
-	viper.SetDefault("share_subnet", "10.0.0.0/8")
-	viper.SetDefault("share_options", "")
+	viper.SetDefault("share_options", "rw=@10.0.0.0/8")
 	viper.SetDefault("server_hostname", "")
 	viper.SetDefault("kube_conf", "kube.conf")
 	viper.SetDefault("kube_reclaim_policy", "Delete")
@@ -106,7 +105,7 @@ func main() {
 	}
 
 	// Create the provisioner
-	zfsProvisioner := provisioner.NewZFSProvisioner(parent, viper.GetString("share_options"), viper.GetString("share_subnet"), viper.GetString("server_hostname"), viper.GetString("kube_reclaim_policy"))
+	zfsProvisioner := provisioner.NewZFSProvisioner(parent, viper.GetString("share_options"), viper.GetString("server_hostname"), viper.GetString("kube_reclaim_policy"))
 
 	// Start and export the prometheus collector
 	registry := prometheus.NewPedanticRegistry()
