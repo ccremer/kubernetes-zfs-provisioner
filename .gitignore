@@ -18,3 +18,5 @@ test
 bin
 .vscode
 .DS_Store
+.env
+kube.conf
