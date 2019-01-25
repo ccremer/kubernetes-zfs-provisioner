@@ -2,5 +2,6 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1beta1
 metadata:
-  name: zfs
+  name: zfs-sc
+  namespace: zfs-system
 provisioner: gentics.com/zfs
