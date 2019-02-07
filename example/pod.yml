@@ -3,6 +3,7 @@ kind: Pod
 apiVersion: v1
 metadata:
   name: example
+  namespace: zfs-system
 spec:
   containers:
   - name: example
@@ -11,12 +12,12 @@ spec:
       - "/bin/sh"
     args:
       - "-c"
-      - "whoami && touch /mnt/SUCCESS && exit 0 || exit 1"
+      - "sleep 10; if [ -e /mnt/SUCCESS ]; then echo 'file already exists'; exit 0; else echo 'file does not exist attempting to create it'; whoami && touch /mnt/SUCCESS && exit 0 || exit 1; fi"
     volumeMounts:
-      - name: zfs
+      - name: zfs-volume
         mountPath: "/mnt"
   restartPolicy: "Never"
   volumes:
-    - name: zfs
+    - name: zfs-volume
       persistentVolumeClaim:
-        claimName: example
+        claimName: example-pvc

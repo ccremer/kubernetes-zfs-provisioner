@@ -2,9 +2,10 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: example
+  name: example-pvc
+  namespace: zfs-system
   annotations:
-    volume.beta.kubernetes.io/storage-class: "zfs"
+    volume.beta.kubernetes.io/storage-class: "zfs-sc"
 spec:
   accessModes:
     - ReadWriteMany
