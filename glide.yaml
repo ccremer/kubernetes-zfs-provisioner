@@ -26,6 +26,10 @@ import:
   subpackages:
   - kubernetes
   - tools/clientcmd
+- package: sigs.k8s.io/sig-storage-lib-external-provisioner
+  version: ~2.2.0
+  subpackages:
+  - controller
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.3.0

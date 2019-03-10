@@ -1,124 +1,62 @@
 package provisioner
 
-import "strconv"
+import (
+	"fmt"
+	"net"
 
-import "k8s.io/client-go/pkg/api/v1"
-import "github.com/prometheus/client_golang/prometheus"
-import zfs "github.com/simt2/go-zfs"
-import log "github.com/Sirupsen/logrus"
+	"go.uber.org/zap"
+)
 
 const (
-	annCreatedBy = "kubernetes.io/createdby"
-	createdBy    = "zfs-provisioner"
+	annotationCreatedByKey   = "kubernetes.io/createdby"
+	annotationDatasetPathKey = "gentics.com/zfs-dataset-path"
+	createdBy                = "gentics.com/zfs"
+
+	scParametersParentDataset = "parentDataset"
+	scParametersShareSubnet   = "shareSubnet"
+	scParametersShareOptions  = "shareOptions"
+	scParametersHostname      = "hostname"
+
+	// Name is the provisoner name referenced in storage classes
+	Name = "gentics.com/zfs"
 )
 
 // ZFSProvisioner implements the Provisioner interface to create and export ZFS volumes
 type ZFSProvisioner struct {
-	parent *zfs.Dataset // The parent dataset
-
-	shareOptions   string // Additional nfs export options, comma-separated
-	shareSubnet    string // The subnet to which the volumes will be exported
-	serverHostname string // The hostname that should be returned as NFS Server
-	reclaimPolicy  v1.PersistentVolumeReclaimPolicy
-
-	persistentVolumeCapacity *prometheus.Desc
-	persistentVolumeUsed     *prometheus.Desc
+	logger *zap.Logger
 }
 
-// Describe implements prometheus.Collector
-func (p ZFSProvisioner) Describe(ch chan<- *prometheus.Desc) {
-	ch <- p.persistentVolumeCapacity
-	ch <- p.persistentVolumeUsed
-}
-
-// Collect implements prometheus.Collector
-func (p ZFSProvisioner) Collect(ch chan<- prometheus.Metric) {
-	children, err := p.parent.Children(1)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("Collecting metrics failed")
-	}
-
-	for _, child := range children {
-		// Skip shapshots
-		if child.Type != "filesystem" {
-			continue
-		}
-
-		capacity, used, err := p.datasetMetrics(child)
+// NewZFSProvisioner returns a new ZFSProvisioner based on a given optional
+// zap.Logger. If none given, zaps default production logger is used.
+func NewZFSProvisioner(logger *zap.Logger) (*ZFSProvisioner, error) {
+	var err error
+	if logger == nil {
+		logger, err = zap.NewProduction()
 		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error("Collecting metrics failed")
-		} else {
-			ch <- *capacity
-			ch <- *used
+			return nil, err
 		}
+
 	}
+	provisioner := &ZFSProvisioner{
+		logger,
+	}
+
+	return provisioner, nil
 }
 
-// NewZFSProvisioner returns a new ZFSProvisioner
-func NewZFSProvisioner(parent *zfs.Dataset, shareOptions string, shareSubnet string, serverHostname string, reclaimPolicy string) ZFSProvisioner {
-	// Prepend a comma if additional options are given
-	if shareOptions != "" {
-		shareOptions = "," + shareOptions
+func validateStorageClassParameters(parameters map[string]string) error {
+	_, ok := parameters[scParametersParentDataset]
+	if !ok {
+		return fmt.Errorf("StorageClass has no parentDataset defined")
 	}
 
-	var kubernetesReclaimPolicy v1.PersistentVolumeReclaimPolicy
-	// Parse reclaim policy
-	switch reclaimPolicy {
-	case "Delete":
-		kubernetesReclaimPolicy = v1.PersistentVolumeReclaimDelete
-	case "Retain":
-		kubernetesReclaimPolicy = v1.PersistentVolumeReclaimRetain
+	shareSubnet, ok := parameters[scParametersShareSubnet]
+	if !ok {
+		return fmt.Errorf("StorageClass has no shareSubnet defined")
+	}
+	if _, _, err := net.ParseCIDR(shareSubnet); err != nil {
+		return fmt.Errorf("StorageClass has an invalid shareSubnet definied: %v", err)
 	}
 
-	return ZFSProvisioner{
-		parent: parent,
-
-		shareOptions:   shareOptions,
-		shareSubnet:    shareSubnet,
-		serverHostname: serverHostname,
-		reclaimPolicy:  kubernetesReclaimPolicy,
-
-		persistentVolumeCapacity: prometheus.NewDesc(
-			"zfs_provisioner_persistent_volume_capacity",
-			"Capacity of a zfs persistent volume.",
-			[]string{"persistent_volume"},
-			prometheus.Labels{
-				"parent":   parent.Name,
-				"hostname": serverHostname,
-			},
-		),
-		persistentVolumeUsed: prometheus.NewDesc(
-			"zfs_provisioner_persistent_volume_used",
-			"Usage of a zfs persistent volume.",
-			[]string{"persistent_volume"},
-			prometheus.Labels{
-				"parent":   parent.Name,
-				"hostname": serverHostname,
-			},
-		),
-	}
-}
-
-// datasetMetrics returns prometheus metrics for a given ZFS dataset
-func (p ZFSProvisioner) datasetMetrics(dataset *zfs.Dataset) (*prometheus.Metric, *prometheus.Metric, error) {
-	capacityString, err := dataset.GetProperty("refquota")
-	if err != nil {
-		return nil, nil, err
-	}
-	capacityInt, _ := strconv.Atoi(capacityString)
-
-	usedString, err := dataset.GetProperty("usedbydataset")
-	if err != nil {
-		return nil, nil, err
-	}
-	usedInt, _ := strconv.Atoi(usedString)
-
-	capacity := prometheus.MustNewConstMetric(p.persistentVolumeCapacity, prometheus.GaugeValue, float64(capacityInt), dataset.Name)
-	used := prometheus.MustNewConstMetric(p.persistentVolumeUsed, prometheus.GaugeValue, float64(usedInt), dataset.Name)
-
-	return &capacity, &used, nil
+	return nil
 }

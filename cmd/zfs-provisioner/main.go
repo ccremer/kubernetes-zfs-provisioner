@@ -1,145 +1,81 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
-	"os/exec"
-	"strings"
-	"time"
+	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/gentics/kubernetes-zfs-provisioner/pkg/provisioner"
-	"github.com/kubernetes-incubator/external-storage/lib/controller"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/simt2/go-zfs"
+
+	"go.uber.org/zap"
+
 	"github.com/spf13/viper"
-	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
 const (
 	leasePeriod   = controller.DefaultLeaseDuration
 	retryPeriod   = controller.DefaultRetryPeriod
 	renewDeadline = controller.DefaultRenewDeadline
-	termLimit     = controller.DefaultTermLimit
 )
 
 func main() {
 	viper.SetEnvPrefix("zfs")
 	viper.AutomaticEnv()
-
-	viper.SetDefault("parent_dataset", "")
-	viper.SetDefault("share_subnet", "10.0.0.0/8")
-	viper.SetDefault("share_options", "")
-	viper.SetDefault("server_hostname", "")
-	viper.SetDefault("kube_conf", "kube.conf")
-	viper.SetDefault("kube_reclaim_policy", "Delete")
-	viper.SetDefault("provisioner_name", "gentics.com/zfs")
 	viper.SetDefault("metrics_port", "8080")
-	viper.SetDefault("debug", false)
 
-	if viper.GetBool("debug") == true {
-		log.SetLevel(log.DebugLevel)
-	}
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
-	// Ensure provisioner name is valid
-	if errs := validateProvisionerName(viper.GetString("provisioner_name"), field.NewPath("provisioner")); len(errs) != 0 {
-		log.WithFields(log.Fields{
-			"errors": errs,
-		}).Fatal("Invalid provisioner name specified")
-	}
-
-	// Retrieve kubernetes config and connect to server
-	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_conf"))
+	// Try in-cluster config
+	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Failed to build config")
+		// Try current kubectl context
+		config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")
+		if err != nil {
+			logger.Fatal("Couldn't get in-cluster or kubectl config", zap.Error(err))
+		}
+		logger.Info("Succeeded with kubectl config")
+	} else {
+		logger.Info("Succeeded with in-cluster config")
 	}
-	log.WithFields(log.Fields{
-		"config": viper.GetString("kube_conf"),
-	}).Info("Loaded kubernetes config")
 
+	// Retrieve config und server version
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Failed to create client")
+		logger.Fatal("Failed to create kubernetes client", zap.Error(err))
 	}
-
-	serverVersion, err := clientset.Discovery().ServerVersion()
+	version, err := clientset.DiscoveryClient.ServerVersion()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Failed to get server version")
+		logger.Fatal("Failed retrieving server version", zap.Error(err))
 	}
-	log.WithFields(log.Fields{
-		"version": serverVersion.GitVersion,
-	}).Info("Retrieved server version")
-
-	// Determine hostname if not set
-	if viper.GetString("server_hostname") == "" {
-		hostname, err := exec.Command("hostname", "-f").Output()
-		if err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Fatal("Determining server hostname via \"hostname -f\" failed")
-		}
-		viper.Set("server_hostname", hostname)
-	}
-
-	// Load ZFS parent dataset
-	if viper.GetString("parent_dataset") == "" {
-		log.WithFields(log.Fields{
-			"error": errors.New("Parent dataset is not set"),
-		}).Fatal("Could not open ZFS parent dataset")
-	}
-	parent, err := zfs.GetDataset(viper.GetString("parent_dataset"))
+	logger.Info("Connected to cluster", zap.String("cluster", config.Host), zap.String("version", fmt.Sprintf("%s.%s", version.Major, version.Minor)))
+	p, err := provisioner.NewZFSProvisioner(logger)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Fatal("Could not open ZFS parent dataset")
+		logger.Fatal("Failed to create ZFS provisioner", zap.Error(err))
 	}
-
-	// Create the provisioner
-	zfsProvisioner := provisioner.NewZFSProvisioner(parent, viper.GetString("share_options"), viper.GetString("share_subnet"), viper.GetString("server_hostname"), viper.GetString("kube_reclaim_policy"))
 
 	// Start and export the prometheus collector
-	registry := prometheus.NewPedanticRegistry()
-	registry.MustRegister(zfsProvisioner)
-	handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{
-		ErrorLog:      log.StandardLogger(),
-		ErrorHandling: promhttp.HTTPErrorOnError,
+	handler := promhttp.HandlerFor(nil, promhttp.HandlerOpts{
+		ErrorHandling: promhttp.PanicOnError,
 	})
 	http.Handle("/metrics", handler)
+	logger.Info("Starting exporter")
 	go func() {
-		log.WithFields(log.Fields{
-			"error": http.ListenAndServe(":"+viper.GetString("metrics_port"), nil),
-		}).Error("Prometheus exporter failed")
+		logger.Fatal("Failed to export metrics", zap.Error(http.ListenAndServe(":"+viper.GetString("metrics_port"), nil)))
 	}()
-	log.Info("Started Prometheus exporter")
 
-	// Start the controller
-	pc := controller.NewProvisionController(clientset, 15*time.Second, viper.GetString("provisioner_name"), zfsProvisioner, serverVersion.GitVersion, false, 2, leasePeriod, renewDeadline, retryPeriod, termLimit)
-	log.Info("Listening for events")
+	pc := controller.NewProvisionController(
+		clientset,
+		provisioner.Name,
+		p,
+		version.GitVersion,
+	)
+	logger.Info("Starting provisoner")
 	pc.Run(wait.NeverStop)
-}
-
-// validateProvisioner tests if provisioner is a valid qualified name.
-// https://github.com/kubernetes/kubernetes/blob/release-1.4/pkg/apis/storage/validation/validation.go
-func validateProvisionerName(provisioner string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if len(provisioner) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, provisioner))
-	}
-	if len(provisioner) > 0 {
-		for _, msg := range validation.IsQualifiedName(strings.ToLower(provisioner)) {
-			allErrs = append(allErrs, field.Invalid(fldPath, provisioner, msg))
-		}
-	}
-	return allErrs
 }

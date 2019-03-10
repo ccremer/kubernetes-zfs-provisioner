@@ -1,5 +1,5 @@
-hash: 706433fbc443d52fa23d6e651e9c4d595b105a25beda1fb153aba3870837d886
-updated: 2019-02-10T11:09:10.618062+01:00
+hash: e90b6d4bf371fa044ad2ebd26b50e985421b487ecdc5e10df0013a6be7574d35
+updated: 2019-02-17T09:05:59.685229+01:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
@@ -128,6 +128,18 @@ imports:
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
 - name: github.com/spf13/viper
   version: 6d33b5a963d922d182c91e8a1c88d81fd150cfd4
+- name: go.uber.org/atomic
+  version: 8dc6146f7569370a472715e178d8ae31172ee6da
+- name: go.uber.org/multierr
+  version: ddea229ff1dff9e6fe8a6c0344ac73b09e81fce5
+- name: go.uber.org/zap
+  version: d2a364dac1d9b70c651d9f47381c5912361e5596
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
 - name: golang.org/x/crypto
   version: de0752318171da717af4ce24d0a2e8626afaeb11
   subpackages:
@@ -139,8 +151,7 @@ imports:
   subpackages:
   - bpf
   - context
-  - html
-  - html/atom
+  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
@@ -149,7 +160,6 @@ imports:
   - ipv4
   - ipv6
   - lex/httplex
-  - websocket
 - name: golang.org/x/oauth2
   version: a6bd8cefa1811bd24b86f8902872e4e8225f74c4
   subpackages:
@@ -415,6 +425,12 @@ imports:
   version: c59034cc13d587f5ef4e85ca0ade0c1866ae8e1d
   subpackages:
   - pkg/util/proto
+- name: sigs.k8s.io/sig-storage-lib-external-provisioner
+  version: 99ac517d9c047238af8b8a6c411084b9f7888a87
+  subpackages:
+  - controller
+  - controller/metrics
+  - util
 - name: sigs.k8s.io/yaml
   version: fd68e9863619f6ec2fdd8625fe1f02e7c877e480
 testImports:
