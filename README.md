@@ -9,12 +9,11 @@ The provisioner can be configured via the following environment variables:
 
 | Variable | Description | Default |
 | :------: | :---------- | :-----: |
-| `ZFS_SERVER_HOSTNAME` | The hostname or ip which the pods should use to mount the volume. Determined via `hostname -f` if empty. | |
 | `ZFS_METRICS_PORT` | Port on which to export Prometheus metrics. | `8080` |
 
 ## Notes
 ### Reclaim policy
-This provisioner currently supports the `Delete` or `Retain` reclaim policy. Until [kubernetes/#38192](https://github.com/kubernetes/kubernetes/issues/38192) is resolved, this is configured per provisioner via an environment variable. To use both, run two instances of the provisioner and configure different storage classes.
+This provisioner currently supports the `Delete` or `Retain` reclaim policy.
 
 ### Storage space
 The provisioner uses the `reflimit` and `refquota` ZFS attributes to limit storage space for volumes. Each volume can not use more storage space than the given resource request and also reserves exactly that much. This means that over provisioning is not possible. Snapshots **do not** account for the storage space limit. See Oracles [ZFS Administration Guide](https://docs.oracle.com/cd/E23823_01/html/819-5461/gazvb.html) for more information.
