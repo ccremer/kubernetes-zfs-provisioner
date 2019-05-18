@@ -6,6 +6,6 @@ metadata:
 provisioner: gentics.com/zfs
 reclaimPolicy: Delete
 parameters:
-  # parentDataset and shareSubnet are mandatory.
-  parentDataset: test/volumes 
-  shareSubnet: 10.0.0.0/8
+  parentDataset: test/volumes
+  shareSubnet: 192.168.99.0/24
+  hostname: 192.168.99.1
