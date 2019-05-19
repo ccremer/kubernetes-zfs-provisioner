@@ -18,3 +18,11 @@ test
 bin
 .vscode
 .DS_Store
+.env
+kube.conf
+
+#Vim tmp files
+*~
+
+#Idea IDE files
+.idea

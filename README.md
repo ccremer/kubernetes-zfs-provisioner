@@ -28,6 +28,6 @@ dd if=/dev/zero bs=1024m count=10 of=disk.img
 # Mount the image as a block device, MacOS way
 hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount disk.img
 # Create zpool with mount in current directory
-sudo zpool create -m (pwd)/test -f test /dev/disk2
+sudo zpool create -m $PWD/test -f test /dev/disk2
 ```
-For development under other operating systems, adapt mount command and block device. 
+For development under other operating systems, adapt mount command and block device.

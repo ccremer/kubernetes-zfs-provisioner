@@ -27,7 +27,6 @@ func NewZFSProvisioner(logger *zap.Logger) (*ZFSProvisioner, error) {
 		if err != nil {
 			return nil, err
 		}
-
 	}
 	provisioner := &ZFSProvisioner{
 		logger,
