@@ -1,0 +1,12 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: example-retain
+spec:
+  storageClassName: zfs-retain
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 128M
