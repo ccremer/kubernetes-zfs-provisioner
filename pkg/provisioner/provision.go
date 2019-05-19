@@ -14,15 +14,15 @@ import (
 
 // Provision creates a PersistentVolume, sets quota and shares it via NFS.
 func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	if err := validateStorageClassParameters(options.Parameters); err != nil {
-		return nil, err
+	parameters, err := NewStorageClassParameters(options.Parameters)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to parse StorageClass parameters: %v", err)
 	}
 
-	datasetPath := fmt.Sprintf("%s/%s", options.Parameters[scParametersParentDataset], options.PVName)
+	datasetPath := fmt.Sprintf("%s/%s", parameters.ParentDataset, options.PVName)
 	properties := make(map[string]string)
 
-	// FUCK FUCUK FUCK FUCKF UCT THIS SHIT not running as root
-	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", options.Parameters[scParametersShareSubnet], options.Parameters[scParametersShareOptions])
+	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", parameters.ShareSubnet, parameters.ShareOptions)
 
 	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
 	storageRequestBytes := strconv.FormatInt(storageRequest.Value(), 10)
@@ -53,7 +53,7 @@ func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persist
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 				NFS: &v1.NFSVolumeSource{
-					Server:   options.Parameters[scParametersHostname],
+					Server:   parameters.Hostname,
 					Path:     dataset.Mountpoint,
 					ReadOnly: false,
 				},

@@ -1,9 +1,6 @@
 package provisioner
 
 import (
-	"fmt"
-	"net"
-
 	"go.uber.org/zap"
 )
 
@@ -11,11 +8,6 @@ const (
 	annotationCreatedByKey   = "kubernetes.io/createdby"
 	annotationDatasetPathKey = "gentics.com/zfs-dataset-path"
 	createdBy                = "gentics.com/zfs"
-
-	scParametersParentDataset = "parentDataset"
-	scParametersShareSubnet   = "shareSubnet"
-	scParametersShareOptions  = "shareOptions"
-	scParametersHostname      = "hostname"
 
 	// Name is the provisoner name referenced in storage classes
 	Name = "gentics.com/zfs"
@@ -42,21 +34,4 @@ func NewZFSProvisioner(logger *zap.Logger) (*ZFSProvisioner, error) {
 	}
 
 	return provisioner, nil
-}
-
-func validateStorageClassParameters(parameters map[string]string) error {
-	_, ok := parameters[scParametersParentDataset]
-	if !ok {
-		return fmt.Errorf("StorageClass has no parentDataset defined")
-	}
-
-	shareSubnet, ok := parameters[scParametersShareSubnet]
-	if !ok {
-		return fmt.Errorf("StorageClass has no shareSubnet defined")
-	}
-	if _, _, err := net.ParseCIDR(shareSubnet); err != nil {
-		return fmt.Errorf("StorageClass has an invalid shareSubnet definied: %v", err)
-	}
-
-	return nil
 }
