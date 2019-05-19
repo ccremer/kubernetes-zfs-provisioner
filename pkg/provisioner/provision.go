@@ -37,7 +37,7 @@ func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persist
 	// See nfs provisioner in github.com/kubernetes-incubator/external-storage for why we annotate this way and if it's still allowed
 	annotations := make(map[string]string)
 	annotations[annotationCreatedByKey] = createdBy
-	annotations[annotationDatasetPathKey] = dataset.Mountpoint
+	annotations[annotationDatasetPathKey] = dataset.Name
 
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
