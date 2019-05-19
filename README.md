@@ -13,7 +13,7 @@ The provisioner can be configured via the following environment variables:
 
 ## Notes
 ### Reclaim policy
-This provisioner currently supports the `Delete` or `Retain` reclaim policy.
+This provisioner currently supports the `Delete` and `Retain` reclaim policy.
 
 ### Storage space
 The provisioner uses the `reflimit` and `refquota` ZFS attributes to limit storage space for volumes. Each volume can not use more storage space than the given resource request and also reserves exactly that much. This means that over provisioning is not possible. Snapshots **do not** account for the storage space limit. See Oracles [ZFS Administration Guide](https://docs.oracle.com/cd/E23823_01/html/819-5461/gazvb.html) for more information.
