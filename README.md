@@ -20,6 +20,11 @@ The provisioner uses the `reflimit` and `refquota` ZFS attributes to limit stora
 
 ## Development
 
+### Requirements
+
+* go 1.14
+* goreleaser
+
 The tests need to manage ZFS datasets, create a testing pool on a disk image:
 
 ```

@@ -26,3 +26,7 @@ kube.conf
 
 #Idea IDE files
 .idea
+
+c.out
+dist
+kubernetes-zfs-provisioner

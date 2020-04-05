@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gentics/kubernetes-zfs-provisioner/pkg/provisioner"
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.uber.org/zap"

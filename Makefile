@@ -15,6 +15,5 @@ clean:
 .PHONY: clean
 
 build: 
-	mkdir -p bin
-	env GOOS=linux go build -o bin/zfs-provisioner cmd/zfs-provisioner/main.go
+	goreleaser release --snapshot --rm-dist --skip-sign
 .PHONY: build
