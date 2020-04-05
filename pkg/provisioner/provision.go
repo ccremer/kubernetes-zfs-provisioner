@@ -6,15 +6,15 @@ import (
 
 	"go.uber.org/zap"
 
-	zfs "github.com/mistifyio/go-zfs"
+	"github.com/mistifyio/go-zfs"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
 // Provision creates a PersistentVolume, sets quota and shares it via NFS.
-func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	parameters, err := NewStorageClassParameters(options.Parameters)
+func (p ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
+	parameters, err := NewStorageClassParameters(options.StorageClass.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse StorageClass parameters: %v", err)
 	}
@@ -46,7 +46,7 @@ func (p ZFSProvisioner) Provision(options controller.VolumeOptions) (*v1.Persist
 			Annotations: annotations,
 		},
 		Spec: v1.PersistentVolumeSpec{
-			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
+			PersistentVolumeReclaimPolicy: *options.StorageClass.ReclaimPolicy,
 			AccessModes:                   options.PVC.Spec.AccessModes,
 			Capacity: v1.ResourceList{
 				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],

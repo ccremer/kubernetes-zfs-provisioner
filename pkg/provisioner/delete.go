@@ -3,7 +3,7 @@ package provisioner
 import (
 	"fmt"
 
-	zfs "github.com/mistifyio/go-zfs"
+	"github.com/mistifyio/go-zfs"
 	"go.uber.org/zap"
 	core "k8s.io/api/core/v1"
 )

@@ -1,11 +1,13 @@
+// +build integration
+
 package provisioner
 
 import (
+	"go.uber.org/zap"
+	storagev1 "k8s.io/api/storage/v1"
 	"os"
 	"os/user"
 	"testing"
-
-	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -17,11 +19,16 @@ import (
 func TestProvision(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	p, _ := NewZFSProvisioner(logger)
-	options := controller.VolumeOptions{
-		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
+	options := controller.ProvisionOptions{
 		PVName:                        "pv-testcreate",
 		PVC:                           newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}, nil),
-		Parameters:                    map[string]string{"parentDataset": "test/volumes", "shareSubnet": "10.0.0.0/8"},
+		StorageClass:                  &storagev1.StorageClass{
+			Parameters: map[string]string{
+				"parentDataset": "test/volumes",
+				"shareSubnet": "10.0.0.0/8",
+				"hostname": "test",
+			},
+		},
 	}
 
 	pv, err := p.Provision(options)

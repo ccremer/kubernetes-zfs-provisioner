@@ -1,6 +1,9 @@
+// +build integration
+
 package provisioner
 
 import (
+	storagev1 "k8s.io/api/storage/v1"
 	"os"
 	"testing"
 
@@ -14,11 +17,16 @@ import (
 func TestDelete(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	p, _ := NewZFSProvisioner(logger)
-	options := controller.VolumeOptions{
-		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
-		PVName:                        "pv-testdelete",
-		PVC:                           newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}, nil),
-		Parameters:                    map[string]string{"parentDataset": "test/volumes", "shareSubnet": "10.0.0.0/8"},
+	options := controller.ProvisionOptions{
+		StorageClass: &storagev1.StorageClass{
+			Parameters: map[string]string{
+				"parentDataset": "test/volumes",
+				"shareSubnet":   "10.0.0.0/8",
+				"hostname":      "test",
+			},
+		},
+		PVName: "pv-testdelete",
+		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}, nil),
 	}
 	pv, _ := p.Provision(options) // Already covered by TestProvision
 
