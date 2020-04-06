@@ -27,12 +27,12 @@ type ZFSStorageClassParameters struct {
 func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassParameters, error) {
 	parentDataset, ok := parameters[scParametersParentDataset]
 	if !ok {
-		return nil, fmt.Errorf("No parentDataset defined")
+		return nil, fmt.Errorf("no parentDataset defined")
 	}
 
 	shareSubnet, ok := parameters[scParametersShareSubnet]
 	if !ok {
-		return nil, fmt.Errorf("No shareSubnet defined")
+		return nil, fmt.Errorf("no shareSubnet defined")
 	}
 	if _, _, err := net.ParseCIDR(shareSubnet); err != nil {
 		return nil, fmt.Errorf("shareSubnet is invalid: %v", parameters[scParametersShareSubnet])
@@ -42,7 +42,7 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 
 	hostname, ok := parameters[scParametersHostname]
 	if !ok {
-		return nil, fmt.Errorf("No hostname defined")
+		return nil, fmt.Errorf("no hostname defined")
 	}
 
 	p := &ZFSStorageClassParameters{

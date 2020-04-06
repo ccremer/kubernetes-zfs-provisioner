@@ -16,7 +16,7 @@ import (
 func (p ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
 	parameters, err := NewStorageClassParameters(options.StorageClass.Parameters)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse StorageClass parameters: %v", err)
+		return nil, fmt.Errorf("failed to parse StorageClass parameters: %w", err)
 	}
 
 	datasetPath := fmt.Sprintf("%s/%s", parameters.ParentDataset, options.PVName)
@@ -24,14 +24,14 @@ func (p ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Pers
 
 	properties["sharenfs"] = fmt.Sprintf("rw=@%s%s", parameters.ShareSubnet, parameters.ShareOptions)
 
-	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)]
+	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceStorage]
 	storageRequestBytes := strconv.FormatInt(storageRequest.Value(), 10)
 	properties["refquota"] = storageRequestBytes
 	properties["refreservation"] = storageRequestBytes
 
 	dataset, err := zfs.CreateFilesystem(datasetPath, properties)
 	if err != nil {
-		return nil, fmt.Errorf("Creating ZFS dataset failed: %v", err)
+		return nil, fmt.Errorf("creating ZFS dataset failed: %w", err)
 	}
 
 	// See nfs provisioner in github.com/kubernetes-incubator/external-storage for why we annotate this way and if it's still allowed
@@ -49,7 +49,7 @@ func (p ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Pers
 			PersistentVolumeReclaimPolicy: *options.StorageClass.ReclaimPolicy,
 			AccessModes:                   options.PVC.Spec.AccessModes,
 			Capacity: v1.ResourceList{
-				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
+				v1.ResourceStorage: options.PVC.Spec.Resources.Requests[v1.ResourceStorage],
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 				NFS: &v1.NFSVolumeSource{

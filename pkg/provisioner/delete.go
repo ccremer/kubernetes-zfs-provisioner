@@ -13,12 +13,12 @@ func (p ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
 	datasetPath := volume.ObjectMeta.Annotations[annotationDatasetPathKey]
 	dataset, err := zfs.GetDataset(datasetPath)
 	if err != nil {
-		return fmt.Errorf("Error retrieving dataset for deletion: %v", err)
+		return fmt.Errorf("error retrieving dataset for deletion: %w", err)
 	}
 
 	err = dataset.Destroy(zfs.DestroyRecursive)
 	if err != nil {
-		return fmt.Errorf("Error destroying dataset: %v", err)
+		return fmt.Errorf("error destroying dataset: %w", err)
 	}
 
 	p.logger.Info("Deleted PV", zap.String("dataset", datasetPath))
