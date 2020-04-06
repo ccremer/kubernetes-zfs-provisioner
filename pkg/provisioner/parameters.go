@@ -46,10 +46,10 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 	}
 
 	p := &ZFSStorageClassParameters{
-		parentDataset,
-		shareSubnet,
-		shareOptions,
-		hostname,
+		ParentDataset: parentDataset,
+		ShareSubnet:   shareSubnet,
+		ShareOptions:  shareOptions,
+		Hostname:      hostname,
 	}
 
 	return p, nil

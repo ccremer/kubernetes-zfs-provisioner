@@ -1,0 +1,3 @@
+# Kube config path. If left empty, the provisioner will try to connect to the API if running within Kubernetes.
+kube_config_path: ""
+metrics_port: 8080

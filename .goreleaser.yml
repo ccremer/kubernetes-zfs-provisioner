@@ -34,6 +34,7 @@ nfpms:
   - deb
   files:
     "packaging/zfs-provisioner.service": /lib/systemd/system/zfs-provisioner.service
+    "packaging/zfs-provisioner.yaml": /var/lib/kubernetes-zfs-provisioner/zfs-provisioner.yaml
   scripts:
     postinstall: "packaging/postinstall.sh"
     preremove: "packaging/preremove.sh"

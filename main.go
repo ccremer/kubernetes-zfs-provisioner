@@ -2,59 +2,50 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
 
 	"go.uber.org/zap"
 
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
-const (
-	leasePeriod   = controller.DefaultLeaseDuration
-	retryPeriod   = controller.DefaultRetryPeriod
-	renewDeadline = controller.DefaultRenewDeadline
+var (
+	// These will be populated by Goreleaser at build time
+	version = "snapshot"
+	commit  = "dirty"
 )
 
 func main() {
-	viper.SetEnvPrefix("zfs")
-	viper.AutomaticEnv()
-	viper.SetDefault("metrics_port", "8080")
+	configureViper()
 
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	// Try in-cluster config
-	config, err := rest.InClusterConfig()
+	err := viper.ReadInConfig()
 	if err != nil {
-		// Try current kubectl context
-		config, err = clientcmd.BuildConfigFromFlags("", os.Getenv("HOME")+"/.kube/config")
-		if err != nil {
-			logger.Fatal("Couldn't get in-cluster or kubectl config", zap.Error(err))
-		}
-		logger.Info("Succeeded with kubectl config")
-	} else {
-		logger.Info("Succeeded with in-cluster config")
+		logger.Warn("Could not read config file", zap.Error(err))
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_config_path"))
+	if err != nil {
+		logger.Fatal("Couldn't get in-cluster or kubectl config", zap.Error(err))
 	}
 
-	// Retrieve config und server version
+	// Retrieve config und server serverVersion
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		logger.Fatal("Failed to create kubernetes client", zap.Error(err))
 	}
-	version, err := clientset.DiscoveryClient.ServerVersion()
+	serverVersion, err := clientset.DiscoveryClient.ServerVersion()
 	if err != nil {
 		logger.Fatal("Failed retrieving server version", zap.Error(err))
 	}
-	logger.Info("Connected to cluster", zap.String("cluster", config.Host), zap.String("version", fmt.Sprintf("%s.%s", version.Major, version.Minor)))
+	logger.Info("Connected to cluster", zap.String("cluster", config.Host), zap.String("version", fmt.Sprintf("%s.%s", serverVersion.Major, serverVersion.Minor)))
 	p, err := provisioner.NewZFSProvisioner(logger)
 	if err != nil {
 		logger.Fatal("Failed to create ZFS provisioner", zap.Error(err))
@@ -74,8 +65,20 @@ func main() {
 		clientset,
 		provisioner.Name,
 		p,
-		version.GitVersion,
+		serverVersion.GitVersion,
 	)
-	logger.Info("Starting provisoner")
+	logger.Info("Starting provisoner", zap.String("version", version), zap.String("commit", commit))
 	pc.Run(wait.NeverStop)
+}
+
+func configureViper() {
+	viper.SetEnvPrefix("zfs")
+	viper.AutomaticEnv()
+	viper.SetConfigName("zfs-provisioner")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("/etc/kubernetes")
+	viper.AddConfigPath("/var/lib/kubernetes-zfs-provisioner")
+	viper.AddConfigPath(".")
+	viper.SetDefault("metrics_port", "8080")
+	viper.SetDefault("kube_config_path", "")
 }
