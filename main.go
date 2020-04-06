@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/klog"
 	"net/http"
-
-	"go.uber.org/zap"
 
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -24,42 +23,25 @@ var (
 func main() {
 	configureViper()
 
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
-	err := viper.ReadInConfig()
-	if err != nil {
-		logger.Warn("Could not read config file", zap.Error(err))
-	}
 	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_config_path"))
 	if err != nil {
-		logger.Fatal("Couldn't get in-cluster or kubectl config", zap.Error(err))
+		klog.Fatalf("Couldn't get in-cluster or kubectl config: %v", err)
 	}
 
-	// Retrieve config und server serverVersion
+	// Retrieve config und server version
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		logger.Fatal("Failed to create kubernetes client", zap.Error(err))
+		klog.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 	serverVersion, err := clientset.DiscoveryClient.ServerVersion()
 	if err != nil {
-		logger.Fatal("Failed retrieving server version", zap.Error(err))
+		klog.Fatalf("Failed retrieving server version: %v", err)
 	}
-	logger.Info("Connected to cluster", zap.String("cluster", config.Host), zap.String("version", fmt.Sprintf("%s.%s", serverVersion.Major, serverVersion.Minor)))
-	p, err := provisioner.NewZFSProvisioner(logger)
+	klog.V(2).Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
+	p, err := provisioner.NewZFSProvisioner()
 	if err != nil {
-		logger.Fatal("Failed to create ZFS provisioner", zap.Error(err))
+		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
 	}
-
-	// Start and export the prometheus collector
-	handler := promhttp.HandlerFor(nil, promhttp.HandlerOpts{
-		ErrorHandling: promhttp.PanicOnError,
-	})
-	http.Handle("/metrics", handler)
-	logger.Info("Starting exporter")
-	go func() {
-		logger.Fatal("Failed to export metrics", zap.Error(http.ListenAndServe(":"+viper.GetString("metrics_port"), nil)))
-	}()
 
 	pc := controller.NewProvisionController(
 		clientset,
@@ -67,8 +49,27 @@ func main() {
 		p,
 		serverVersion.GitVersion,
 	)
-	logger.Info("Starting provisoner", zap.String("version", version), zap.String("commit", commit))
+
+	go startMetricsExporter()
+	klog.V(2).Infof("Starting provisoner version \"%s\" commit \"%s\"", version, commit)
 	pc.Run(wait.NeverStop)
+}
+
+func startMetricsExporter() {
+	// Start and export the prometheus collector
+	handler := promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+		ErrorHandling: promhttp.PanicOnError,
+	})
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
+	})
+	http.Handle("/metrics", handler)
+	klog.V(3).Info("Starting exporter")
+	bindAddr := ":" + viper.GetString("metrics_port")
+	err := http.ListenAndServe(bindAddr, nil)
+	if err != http.ErrServerClosed {
+		klog.Errorf("Failed to export metrics: %v", err)
+	}
 }
 
 func configureViper() {
@@ -81,4 +82,9 @@ func configureViper() {
 	viper.AddConfigPath(".")
 	viper.SetDefault("metrics_port", "8080")
 	viper.SetDefault("kube_config_path", "")
+
+	err := viper.ReadInConfig()
+	if err != nil {
+		klog.Warningf("Could not read config file: %v", err)
+	}
 }

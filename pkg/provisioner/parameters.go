@@ -35,7 +35,7 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 		return nil, fmt.Errorf("no shareSubnet defined")
 	}
 	if _, _, err := net.ParseCIDR(shareSubnet); err != nil {
-		return nil, fmt.Errorf("shareSubnet is invalid: %v", parameters[scParametersShareSubnet])
+		return nil, fmt.Errorf("shareSubnet '%v' is invalid: %w", parameters[scParametersShareSubnet], err)
 	}
 
 	shareOptions := parameters[scParametersShareOptions]

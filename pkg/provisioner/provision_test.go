@@ -3,7 +3,6 @@
 package provisioner
 
 import (
-	"go.uber.org/zap"
 	storagev1 "k8s.io/api/storage/v1"
 	"os"
 	"os/user"
@@ -17,8 +16,7 @@ import (
 )
 
 func TestProvision(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	p, _ := NewZFSProvisioner(logger)
+	p, _ := NewZFSProvisioner()
 	options := controller.ProvisionOptions{
 		PVName:                        "pv-testcreate",
 		PVC:                           newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}, nil),

@@ -2,9 +2,9 @@ package provisioner
 
 import (
 	"fmt"
+	"k8s.io/klog"
 
 	"github.com/mistifyio/go-zfs"
-	"go.uber.org/zap"
 	core "k8s.io/api/core/v1"
 )
 
@@ -21,6 +21,6 @@ func (p ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
 		return fmt.Errorf("error destroying dataset: %w", err)
 	}
 
-	p.logger.Info("Deleted PV", zap.String("dataset", datasetPath))
+	klog.V(2).Infof("dataset \"%s\": destroyed", dataset.Name)
 	return nil
 }

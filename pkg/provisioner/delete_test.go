@@ -8,15 +8,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
 func TestDelete(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	p, _ := NewZFSProvisioner(logger)
+	p, _ := NewZFSProvisioner()
 	options := controller.ProvisionOptions{
 		StorageClass: &storagev1.StorageClass{
 			Parameters: map[string]string{
