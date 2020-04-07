@@ -2,8 +2,6 @@ package main
 
 import (
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
 	"net/http"
 
@@ -15,9 +13,12 @@ import (
 )
 
 const (
+	metricsAddrKey         = "metrics_addr"
+	metricsPortKey         = "metrics_port"
 	kubeConfigPathKey      = "kube_config_path"
 	provisionerInstanceKey = "provisioner_instance"
 )
+
 var (
 	// These will be populated by Goreleaser at build time
 	version = "snapshot"
@@ -47,33 +48,21 @@ func main() {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
 	}
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
+	})
+
 	pc := controller.NewProvisionController(
 		clientset,
 		viper.GetString(provisionerInstanceKey),
 		p,
 		serverVersion.GitVersion,
+		controller.MetricsAddress(viper.GetString(metricsAddrKey)),
+		controller.MetricsPort(viper.GetInt32(metricsPortKey)),
 	)
 
-	go startMetricsExporter()
 	klog.Infof("Starting provisioner version \"%s\" commit \"%s\"", version, commit)
 	pc.Run(wait.NeverStop)
-}
-
-func startMetricsExporter() {
-	// Start and export the prometheus collector
-	handler := promhttp.HandlerFor(prometheus.DefaultGatherer, promhttp.HandlerOpts{
-		ErrorHandling: promhttp.PanicOnError,
-	})
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
-	})
-	http.Handle("/metrics", handler)
-	klog.Info("Starting exporter")
-	bindAddr := ":" + viper.GetString("metrics_port")
-	err := http.ListenAndServe(bindAddr, nil)
-	if err != http.ErrServerClosed {
-		klog.Errorf("Failed to export metrics: %v", err)
-	}
 }
 
 func configureViper() {
@@ -84,7 +73,8 @@ func configureViper() {
 	viper.AddConfigPath("/etc/kubernetes")
 	viper.AddConfigPath("/var/lib/kubernetes-zfs-provisioner")
 	viper.AddConfigPath(".")
-	viper.SetDefault("metrics_port", "8080")
+	viper.SetDefault(metricsPortKey, "8080")
+	viper.SetDefault(metricsAddrKey, "0.0.0.0")
 	viper.SetDefault(kubeConfigPathKey, "")
 	viper.SetDefault(provisionerInstanceKey, "gentics.com/zfs")
 
