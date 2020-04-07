@@ -32,11 +32,10 @@ func (p ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Pers
 	if err != nil {
 		return nil, fmt.Errorf("creating ZFS dataset failed: %w", err)
 	}
-	klog.V(2).Infof("dataset \"%s\": created", dataset.Name)
+	klog.Infof("dataset \"%s\": created", dataset.Name)
 
 	// See nfs provisioner in github.com/kubernetes-incubator/external-storage for why we annotate this way and if it's still allowed
 	annotations := make(map[string]string)
-	annotations[annotationCreatedByKey] = createdBy
 	annotations[annotationDatasetPathKey] = dataset.Name
 
 	pv := &v1.PersistentVolume{

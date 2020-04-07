@@ -14,6 +14,10 @@ import (
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
+const (
+	kubeConfigPathKey      = "kube_config_path"
+	provisionerInstanceKey = "provisioner_instance"
+)
 var (
 	// These will be populated by Goreleaser at build time
 	version = "snapshot"
@@ -37,7 +41,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed retrieving server version: %v", err)
 	}
-	klog.V(2).Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
+	klog.Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
 	p, err := provisioner.NewZFSProvisioner()
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
@@ -45,13 +49,13 @@ func main() {
 
 	pc := controller.NewProvisionController(
 		clientset,
-		provisioner.Name,
+		viper.GetString(provisionerInstanceKey),
 		p,
 		serverVersion.GitVersion,
 	)
 
 	go startMetricsExporter()
-	klog.V(2).Infof("Starting provisoner version \"%s\" commit \"%s\"", version, commit)
+	klog.Infof("Starting provisioner version \"%s\" commit \"%s\"", version, commit)
 	pc.Run(wait.NeverStop)
 }
 
@@ -64,7 +68,7 @@ func startMetricsExporter() {
 		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
 	})
 	http.Handle("/metrics", handler)
-	klog.V(3).Info("Starting exporter")
+	klog.Info("Starting exporter")
 	bindAddr := ":" + viper.GetString("metrics_port")
 	err := http.ListenAndServe(bindAddr, nil)
 	if err != http.ErrServerClosed {
@@ -81,7 +85,8 @@ func configureViper() {
 	viper.AddConfigPath("/var/lib/kubernetes-zfs-provisioner")
 	viper.AddConfigPath(".")
 	viper.SetDefault("metrics_port", "8080")
-	viper.SetDefault("kube_config_path", "")
+	viper.SetDefault(kubeConfigPathKey, "")
+	viper.SetDefault(provisionerInstanceKey, "gentics.com/zfs")
 
 	err := viper.ReadInConfig()
 	if err != nil {

@@ -21,6 +21,6 @@ func (p ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
 		return fmt.Errorf("error destroying dataset: %w", err)
 	}
 
-	klog.V(2).Infof("dataset \"%s\": destroyed", dataset.Name)
+	klog.Infof("dataset \"%s\": destroyed", dataset.Name)
 	return nil
 }
