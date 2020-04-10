@@ -11,16 +11,29 @@ This provisioner is considered highly **experimental** and is still under develo
 For more information about external storage in kubernetes, see [kubernetes-incubator/external-storage](https://github.com/kubernetes-incubator/external-storage).
 
 ## Usage
+
 The provisioner can be configured via the following environment variables:
 
 | Variable | Description | Default |
 | :------: | :---------- | :-----: |
 | `ZFS_METRICS_PORT` | Port on which to export Prometheus metrics. | `8080` |
+| `ZFS_METRICS_ADDR` | Interface binding address on which to export Prometheus metrics. | `0.0.0.0` |
+| `ZFS_KUBE_CONFIG_PATH` | Kubeconfig file path in which the credentials and API URL are defined. | `` |
+
+Alternatively, provide a `zfs-provisioner.yaml` file in one of the following locations (first found):
+* /etc/kubernetes
+* /var/lib/kubernetes-zfs-provisioner (default file included in `deb` package)
+* $PWD (current work dir)
+
+See `packaging/zfs-provisioner.yaml` for the configuration options and defaults.
+
+See Environment Variables for parameter description. Each entry can be overridden via Environment Variables, as they take
+precedence over the values configured in the YAML file.
 
 ## Notes
 ### Reclaim policy
 
-This provisioner currently supports the `Delete` and `Retain` reclaim policy.
+This provisioner currently supports the `Delete` and `Retain` reclaim policies.
 
 ### Storage space
 
