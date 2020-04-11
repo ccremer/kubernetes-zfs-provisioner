@@ -15,7 +15,8 @@ build:
 	$(goreleaser_cmd)
 
 install_zfs:
-	sudo apt install -y zfsutils nfs-kernel-server
+	sudo apt update
+	sudo apt install -y zfsutils-linux nfs-kernel-server
 
 $(zpool_name_file):
 	if [[ ! -d $(zpool_dir) ]]; then mkdir $(zpool_dir); fi
