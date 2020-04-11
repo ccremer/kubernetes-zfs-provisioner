@@ -25,8 +25,8 @@ snapshot:
 
 dockers:
 - image_templates:
-  - "docker.io/braindoctor/zfs-provisioner:v{{ .Version }}"
-  - "docker.io/braindoctor/zfs-provisioner:v{{ .Major }}"
+  - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
+  - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
   extra_files:
   - packaging/zfs.sh
 
