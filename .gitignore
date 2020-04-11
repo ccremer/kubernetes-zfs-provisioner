@@ -30,3 +30,4 @@ kube.conf
 c.out
 dist
 kubernetes-zfs-provisioner
+.zpool
