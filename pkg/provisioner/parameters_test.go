@@ -19,61 +19,61 @@ func TestNewStorageClassParameters(t *testing.T) {
 			name: "GivenWrongSpec_WhenParentDatasetEmpty_ThenThrowError",
 			args: args{
 				parameters: map[string]string{
-					hostnameParameter: "host",
+					HostnameParameter: "host",
 				},
 			},
-			errContains: parentDatasetParameter,
+			errContains: ParentDatasetParameter,
 		},
 		{
 			name: "GivenWrongSpec_WhenParentDatasetBeginsWithSlash_ThenThrowError",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "/tank",
-					hostnameParameter:      "host",
-					typeParameter:          "nfs",
+					ParentDatasetParameter: "/tank",
+					HostnameParameter:      "host",
+					TypeParameter:          "nfs",
 				},
 			},
-			errContains: parentDatasetParameter,
+			errContains: ParentDatasetParameter,
 		},
 		{
 			name: "GivenWrongSpec_WhenParentDatasetEndsWithSlash_ThenThrowError",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "/tank/volume/",
-					hostnameParameter:      "host",
-					typeParameter:          "nfs",
+					ParentDatasetParameter: "/tank/volume/",
+					HostnameParameter:      "host",
+					TypeParameter:          "nfs",
 				},
 			},
-			errContains: parentDatasetParameter,
+			errContains: ParentDatasetParameter,
 		},
 		{
 			name: "GivenWrongSpec_WhenHostnameEmpty_ThenThrowError",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "tank",
+					ParentDatasetParameter: "tank",
 				},
 			},
-			errContains: hostnameParameter,
+			errContains: HostnameParameter,
 		},
 		{
 			name: "GivenWrongSpec_WhenTypeInvalid_ThenThrowError",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "tank",
-					hostnameParameter:      "host",
-					typeParameter:          "invalid",
+					ParentDatasetParameter: "tank",
+					HostnameParameter:      "host",
+					TypeParameter:          "invalid",
 				},
 			},
-			errContains: typeParameter,
+			errContains: TypeParameter,
 		},
 		{
 			name: "GivenCorrectSpec_WhenTypeNfs_ThenReturnNfsParameters",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter:   "tank",
-					hostnameParameter:        "host",
-					typeParameter:            "nfs",
-					sharePropertiesParameter: "rw",
+					ParentDatasetParameter:   "tank",
+					HostnameParameter:        "host",
+					TypeParameter:            "nfs",
+					SharePropertiesParameter: "rw",
 				},
 			},
 			want: &ZFSStorageClassParameters{NFS: &NFSParameters{ShareProperties: "rw"}},
@@ -82,9 +82,9 @@ func TestNewStorageClassParameters(t *testing.T) {
 			name: "GivenCorrectSpec_WhenTypeNfsWithoutProperties_ThenReturnNfsParametersWithDefault",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "tank",
-					hostnameParameter:      "host",
-					typeParameter:          "nfs",
+					ParentDatasetParameter: "tank",
+					HostnameParameter:      "host",
+					TypeParameter:          "nfs",
 				},
 			},
 			want: &ZFSStorageClassParameters{NFS: &NFSParameters{ShareProperties: "on"}},
@@ -93,10 +93,10 @@ func TestNewStorageClassParameters(t *testing.T) {
 			name: "GivenCorrectSpec_WhenTypeHostPath_ThenReturnHostPathParameters",
 			args: args{
 				parameters: map[string]string{
-					parentDatasetParameter: "tank",
-					hostnameParameter:      "host",
-					typeParameter:          "hostpath",
-					nodeNameParameter:      "my-node",
+					ParentDatasetParameter: "tank",
+					HostnameParameter:      "host",
+					TypeParameter:          "hostpath",
+					NodeNameParameter:      "my-node",
 				},
 			},
 			want: &ZFSStorageClassParameters{HostPath: &HostPathParameters{NodeName: "my-node"}},

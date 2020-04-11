@@ -35,10 +35,10 @@ func TestProvisionNfs(t *testing.T) {
 		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}),
 		StorageClass: &storagev1.StorageClass{
 			Parameters: map[string]string{
-				parentDatasetParameter:   "test/volumes",
-				hostnameParameter:        expectedHost,
-				typeParameter:            "nfs",
-				sharePropertiesParameter: expectedShareProperties,
+				ParentDatasetParameter:   "test/volumes",
+				HostnameParameter:        expectedHost,
+				TypeParameter:            "nfs",
+				SharePropertiesParameter: expectedShareProperties,
 			},
 		},
 	}
@@ -89,10 +89,10 @@ func TestProvisionHostPath(t *testing.T) {
 		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}),
 		StorageClass: &storagev1.StorageClass{
 			Parameters: map[string]string{
-				parentDatasetParameter: "test/volumes",
-				hostnameParameter:      expectedHost,
-				typeParameter:          "hostpath",
-				nodeNameParameter:      "node",
+				ParentDatasetParameter: "test/volumes",
+				HostnameParameter:      expectedHost,
+				TypeParameter:          "hostpath",
+				NodeNameParameter:      "node",
 			},
 			ReclaimPolicy: &policy,
 		},

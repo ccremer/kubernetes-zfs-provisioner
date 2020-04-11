@@ -54,6 +54,9 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	klog.Infof("dataset \"%s\": created", dataset.Name)
 
 	// Copy the annotations from the claim and overwrite with ours
+	if options.PVC.Annotations == nil {
+		options.PVC.Annotations = make(map[string]string)
+	}
 	annotations := options.PVC.Annotations
 	annotations[DatasetPathAnnotation] = dataset.Name
 	annotations[ZFSHostAnnotation] = parameters.Hostname

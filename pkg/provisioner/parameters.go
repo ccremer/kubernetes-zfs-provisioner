@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	parentDatasetParameter   = "parentDataset"
-	sharePropertiesParameter = "shareProperties"
-	hostnameParameter        = "hostname"
-	typeParameter            = "type"
-	nodeNameParameter        = "node"
+	ParentDatasetParameter   = "parentDataset"
+	SharePropertiesParameter = "shareProperties"
+	HostnameParameter        = "hostname"
+	TypeParameter            = "type"
+	NodeNameParameter        = "node"
 )
 
 // StorageClass Parameters are expected in the following schema:
@@ -47,33 +47,33 @@ type (
 // NewStorageClassParameters takes a storage class parameters, validates it for invalid configuration and returns a
 // ZFSStorageClassParameters on success.
 func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassParameters, error) {
-	for _, parameter := range []string{parentDatasetParameter, hostnameParameter, typeParameter} {
+	for _, parameter := range []string{ParentDatasetParameter, HostnameParameter, TypeParameter} {
 		value := parameters[parameter]
 		if value == "" {
 			return nil, fmt.Errorf("undefined required parameter: %s", parameter)
 		}
 	}
-	parentDataset := parameters[parentDatasetParameter]
+	parentDataset := parameters[ParentDatasetParameter]
 	if strings.HasPrefix(parentDataset, "/") || strings.HasSuffix(parentDataset, "/") {
-		return nil, fmt.Errorf("%s must not begin or end with '/': %s", parentDatasetParameter, parentDataset)
+		return nil, fmt.Errorf("%s must not begin or end with '/': %s", ParentDatasetParameter, parentDataset)
 	}
 	p := &ZFSStorageClassParameters{
 		ParentDataset: parentDataset,
-		Hostname:      parameters[hostnameParameter],
+		Hostname:      parameters[HostnameParameter],
 	}
-	typeParam := parameters[typeParameter]
+	typeParam := parameters[TypeParameter]
 	switch typeParam {
 	case "hostpath", "hostPath", "HostPath", "Hostpath", "HOSTPATH":
-		p.HostPath = &HostPathParameters{NodeName: parameters[nodeNameParameter]}
+		p.HostPath = &HostPathParameters{NodeName: parameters[NodeNameParameter]}
 		return p, nil
 	case "nfs", "Nfs", "NFS":
-		shareProps := parameters[sharePropertiesParameter]
+		shareProps := parameters[SharePropertiesParameter]
 		if shareProps == "" {
 			shareProps = "on"
 		}
 		p.NFS = &NFSParameters{ShareProperties: shareProps}
 		return p, nil
 	default:
-		return nil, fmt.Errorf("invalid '%s' parameter value: %s", typeParameter, typeParam)
+		return nil, fmt.Errorf("invalid '%s' parameter value: %s", TypeParameter, typeParam)
 	}
 }
