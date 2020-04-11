@@ -2,13 +2,16 @@ package provisioner
 
 import (
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
+	"os"
 	"sync"
 )
 
 const (
-	DatasetPathAnnotation = "zfs.pv.kubernetes.io/zfs-dataset-path"
-	ZFSHostAnnotation     = "zfs.pv.kubernetes.io/zfs-host"
-	ZFSHostEnvVar         = "ZFS_HOST"
+	DatasetPathAnnotation      = "zfs.pv.kubernetes.io/zfs-dataset-path"
+	ZFSHostAnnotation          = "zfs.pv.kubernetes.io/zfs-host"
+	ZFSHostEnvVar              = "ZFS_HOST"
+	ZFSUpdatePermissionsEnvVar = "ZFS_UPDATE_PERMISSIONS"
+	ZFSDatasetEnvVar           = "ZFS_DATASET"
 )
 
 var (
@@ -24,4 +27,23 @@ type ZFSProvisioner struct {
 // zap.Logger. If none given, zaps default production logger is used.
 func NewZFSProvisioner() (*ZFSProvisioner, error) {
 	return &ZFSProvisioner{zfs: zfs.NewInterface()}, nil
+}
+
+func setEnvironmentVars(hostName string, updatePermissions bool, zfsMountPath string) error {
+	if err := os.Setenv(ZFSHostEnvVar, hostName); err != nil {
+		return err
+	}
+	if updatePermissions {
+		if err := os.Setenv(ZFSUpdatePermissionsEnvVar, "yes"); err != nil {
+			return err
+		}
+	} else {
+		if err := os.Setenv(ZFSUpdatePermissionsEnvVar, "no"); err != nil {
+			return err
+		}
+	}
+	if err := os.Setenv(ZFSDatasetEnvVar, zfsMountPath); err != nil {
+		return err
+	}
+	return nil
 }

@@ -1,7 +1,6 @@
 # Kube config path. If left empty, the provisioner will try to connect to the API if running within Kubernetes.
 kube_config_path: ""
-# If you have multiple provisioners (ZFS nodes), make them unique for each cluster
-provisioner_instance: "gentics.com/zfs"
+provisioner_instance: "pv.kubernetes.io/zfs"
 # port to listen for Prometheus scrapes. Set to 0 to disable metrics.
 metrics_port: 8080
 metrics_addr: "0.0.0.0"

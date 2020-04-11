@@ -3,10 +3,8 @@ package provisioner
 import (
 	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
-	"k8s.io/klog"
-	"os"
-
 	core "k8s.io/api/core/v1"
+	"k8s.io/klog"
 )
 
 // Delete removes a given volume from the server
@@ -23,7 +21,7 @@ func (p *ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
 	klog.V(3).Info("acquiring lock...")
 	globalLock.Lock()
 	defer globalLock.Unlock()
-	if err := os.Setenv(ZFSHostEnvVar, zfsHost); err != nil {
+	if err := setEnvironmentVars(zfsHost, false, datasetPath); err != nil {
 		return err
 	}
 

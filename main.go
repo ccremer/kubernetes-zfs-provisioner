@@ -76,7 +76,7 @@ func configureViper() {
 	viper.SetDefault(metricsPortKey, "8080")
 	viper.SetDefault(metricsAddrKey, "0.0.0.0")
 	viper.SetDefault(kubeConfigPathKey, "")
-	viper.SetDefault(provisionerInstanceKey, "gentics.com/zfs")
+	viper.SetDefault(provisionerInstanceKey, "pv.kubernetes.io/zfs")
 
 	err := viper.ReadInConfig()
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	"k8s.io/klog"
-	"os"
 	"strconv"
 
 	v1 "k8s.io/api/core/v1"
@@ -44,7 +43,8 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	klog.V(3).Info("acquiring lock...")
 	globalLock.Lock()
 	defer globalLock.Unlock()
-	if err := os.Setenv(ZFSHostEnvVar, parameters.Hostname); err != nil {
+	err = setEnvironmentVars(parameters.Hostname, true, datasetPath)
+	if err != nil {
 		return nil, err
 	}
 	dataset, err := p.zfs.CreateDataset(datasetPath, properties)
@@ -57,7 +57,6 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	annotations := options.PVC.Annotations
 	annotations[DatasetPathAnnotation] = dataset.Name
 	annotations[ZFSHostAnnotation] = parameters.Hostname
-
 
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
