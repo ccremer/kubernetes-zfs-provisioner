@@ -37,8 +37,10 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 
 	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceStorage]
 	storageRequestBytes := strconv.FormatInt(storageRequest.Value(), 10)
-	properties["refquota"] = storageRequestBytes
-	properties["refreservation"] = storageRequestBytes
+	properties[RefQuotaProperty] = storageRequestBytes
+	properties[RefReservationProperty] = storageRequestBytes
+	properties[ManagedByProperty] = p.InstanceName
+	properties[ReclaimPolicyProperty] = string(reclaimPolicy)
 
 	klog.V(3).Info("acquiring lock...")
 	globalLock.Lock()

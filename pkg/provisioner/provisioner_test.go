@@ -27,5 +27,8 @@ func (z *zfsStub) DestroyDataset(dataset *zfs.Dataset, flag zfs.DestroyFlag) err
 }
 
 func NewZFSProvisionerStub(stub *zfsStub) (*ZFSProvisioner, error) {
-	return &ZFSProvisioner{zfs: stub}, nil
+	return &ZFSProvisioner{
+		zfs:          stub,
+		InstanceName: "test",
+	}, nil
 }

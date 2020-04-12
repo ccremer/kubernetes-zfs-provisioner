@@ -42,8 +42,10 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Failed retrieving server version: %v", err)
 	}
+
+	instance := viper.GetString(provisionerInstanceKey)
 	klog.Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
-	p, err := provisioner.NewZFSProvisioner()
+	p, err := provisioner.NewZFSProvisioner(instance)
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
 	}
@@ -54,7 +56,7 @@ func main() {
 
 	pc := controller.NewProvisionController(
 		clientset,
-		viper.GetString(provisionerInstanceKey),
+		instance,
 		p,
 		serverVersion.GitVersion,
 		controller.MetricsAddress(viper.GetString(metricsAddrKey)),

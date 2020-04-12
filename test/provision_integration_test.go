@@ -43,7 +43,7 @@ func (suite *ProvisionTestSuit) SetupSuite() {
 	pwd, _ := os.Getwd()
 	err := os.Setenv("PATH", pwd+":"+path)
 	require.NoError(suite.T(), err)
-	prov, err := provisioner.NewZFSProvisioner()
+	prov, err := provisioner.NewZFSProvisioner("pv.kubernetes.io/zfs")
 	require.NoError(suite.T(), err)
 	suite.p = prov
 }
@@ -75,6 +75,10 @@ func (suite *ProvisionTestSuit) TestProvisionDataset() {
 	_, err := suite.p.Provision(options)
 	assert.NoError(t, err)
 	require.DirExists(t, fullDataset)
+	assertNfsExport(t, fullDataset)
+}
+
+func assertNfsExport(t *testing.T, fullDataset string) {
 	file, err := os.Open("/var/lib/nfs/etab")
 	require.NoError(t, err)
 	defer file.Close()

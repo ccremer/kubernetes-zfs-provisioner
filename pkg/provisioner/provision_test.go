@@ -21,9 +21,11 @@ func TestProvisionNfs(t *testing.T) {
 	expectedHost := "host"
 	stub := new(zfsStub)
 	stub.On("CreateDataset", expectedDataset, map[string]string{
-		"refquota":       "1000000000",
-		"refreservation": "1000000000",
-		"sharenfs":       "rw=@10.0.0.0/8",
+		RefQuotaProperty:       "1000000000",
+		RefReservationProperty: "1000000000",
+		"sharenfs":             "rw=@10.0.0.0/8",
+		ManagedByProperty:      "test",
+		ReclaimPolicyProperty:  string(v1.PersistentVolumeReclaimDelete),
 	}).Return(&zfs.Dataset{
 		Name:       expectedDataset,
 		Mountpoint: "/" + expectedDataset,
@@ -73,17 +75,19 @@ func TestProvisionHostPath(t *testing.T) {
 
 	expectedDataset := "test/volumes/pv-testcreate"
 	expectedHost := "host"
+	policy := v1.PersistentVolumeReclaimRetain
 	stub := new(zfsStub)
 	stub.On("CreateDataset", expectedDataset, map[string]string{
-		"refquota":       "1000000000",
-		"refreservation": "1000000000",
+		RefQuotaProperty:       "1000000000",
+		RefReservationProperty: "1000000000",
+		ManagedByProperty:      "test",
+		ReclaimPolicyProperty:  string(policy),
 	}).Return(&zfs.Dataset{
 		Name:       expectedDataset,
 		Mountpoint: "/" + expectedDataset,
 	}, nil)
 
 	p, _ := NewZFSProvisionerStub(stub)
-	policy := v1.PersistentVolumeReclaimRetain
 	options := controller.ProvisionOptions{
 		PVName: "pv-testcreate",
 		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}),
@@ -104,10 +108,11 @@ func TestProvisionHostPath(t *testing.T) {
 
 	assert.Equal(t, policy, pv.Spec.PersistentVolumeReclaimPolicy)
 
+	hostPathType := v1.HostPathDirectory
 	require.NotNil(t, pv.Spec.HostPath)
 	require.Nil(t, pv.Spec.NFS)
 	assert.Equal(t, "/"+expectedDataset, pv.Spec.HostPath.Path)
-	assert.Equal(t, v1.HostPathDirectory, pv.Spec.HostPath.Type)
+	assert.Equal(t, &hostPathType, pv.Spec.HostPath.Type)
 	assert.Contains(t, pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values, "node")
 }
 
