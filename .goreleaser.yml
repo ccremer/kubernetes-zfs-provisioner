@@ -1,0 +1,62 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+  - go vet ./...
+  - go test -coverprofile c.out ./...
+
+builds:
+- env:
+  - CGO_ENABLED=0 # this is needed otherwise the Docker image build is faulty
+  goarch:
+  - amd64
+  goos:
+  - linux
+
+archives:
+- format: binary
+  name_template: "{{ .Binary }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-snapshot"
+
+dockers:
+- image_templates:
+  - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
+  - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
+  extra_files:
+  - packaging/zfs.sh
+
+nfpms:
+- vendor: ccremer
+  homepage: https://github.com/ccremer/kubernetes-zfs-provisioner
+  maintainer: ccremer
+  description: A ZFS persistent volume provisioner for Kubernetes
+  license: Apache 2.0
+  file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+  formats:
+  - deb
+  files:
+    "packaging/zfs-provisioner.service": /lib/systemd/system/zfs-provisioner.service
+    "packaging/zfs-provisioner.yaml": /var/lib/kubernetes-zfs-provisioner/zfs-provisioner.yaml
+  scripts:
+    postinstall: "packaging/postinstall.sh"
+    preremove: "packaging/preremove.sh"
+    postremove: "packaging/postremove.sh"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^Docs:'
+    - '^Test:'
+    - '^Refactor:'
+    - '^Merge pull request'
+
+release:
+  github:
+    owner: ccremer
+    name: kubernetes-zfs-provisioner

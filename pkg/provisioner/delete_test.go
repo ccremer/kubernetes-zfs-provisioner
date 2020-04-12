@@ -1,30 +1,41 @@
 package provisioner
 
 import (
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
+	gozfs "github.com/mistifyio/go-zfs"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	core "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
 )
 
-func TestDelete(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
-	p, _ := NewZFSProvisioner(logger)
-	options := controller.VolumeOptions{
-		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
-		PVName:                        "pv-testdelete",
-		PVC:                           newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}, nil),
-		Parameters:                    map[string]string{"parentDataset": "test/volumes", "shareSubnet": "10.0.0.0/8"},
+func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testing.T) {
+	expectedDataset := "test/volumes/pv-testcreate"
+	dataset := &zfs.Dataset{
+		Name:       expectedDataset,
 	}
-	pv, _ := p.Provision(options) // Already covered by TestProvision
+	stub := new(zfsStub)
+	stub.On("DestroyDataset", dataset, zfs.DestroyFlag(gozfs.DestroyRecursive)).
+		Return(nil)
+	p, _ := NewZFSProvisionerStub(stub)
+	pv := core.PersistentVolume{ObjectMeta: v1.ObjectMeta{Annotations: map[string]string{
+		DatasetPathAnnotation: expectedDataset,
+		ZFSHostAnnotation:     "host",
+	}}}
+	result := p.Delete(&pv)
+	require.NoError(t, result)
+	stub.AssertExpectations(t)
+	assert.Equal(t, "host", os.Getenv(ZFSHostEnvVar))
+}
 
-	err := p.Delete(pv)
-	assert.NoError(t, err, "Delete should not return an error")
-
-	_, err = os.Stat(pv.Spec.PersistentVolumeSource.NFS.Path)
-	assert.Error(t, err, "The volume should not exist on disk")
+func TestDelete_GivenVolume_WhenAnnotationMissing_ThenThrowError(t *testing.T) {
+	stub := new(zfsStub)
+	p, _ := NewZFSProvisionerStub(stub)
+	pv := core.PersistentVolume{}
+	err := p.Delete(&pv)
+	require.Error(t, err)
+	stub.AssertExpectations(t)
+	assert.Contains(t, err.Error(), "annotation")
 }
