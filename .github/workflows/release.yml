@@ -18,6 +18,8 @@ jobs:
       with:
         path: /home/runner/go/pkg/mod
         key: go-mod-release
+    - name: Login to Docker hub
+      run: docker login -u ${{ secrets.DOCKER_HUB_USER }} -p ${{ secrets.DOCKER_HUB_TOKEN }}
     - uses: goreleaser/goreleaser-action@v1
       with:
         args: release

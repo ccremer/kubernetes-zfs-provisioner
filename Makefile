@@ -18,8 +18,10 @@ install_zfs:
 	sudo apt update
 	sudo apt install -y zfsutils-linux nfs-kernel-server
 
-$(zpool_name_file):
-	if [[ ! -d $(zpool_dir) ]]; then mkdir $(zpool_dir); fi
+$(zpool_dir):
+	mkdir $(zpool_dir)
+
+$(zpool_name_file): $(zpool_dir)
 	# Create a disk image
 	dd if=/dev/zero bs=1024M count=$(ZPOOL_SIZE) of=$$(pwd)/$(zpool_disk)
 	echo $(zpool_name)
