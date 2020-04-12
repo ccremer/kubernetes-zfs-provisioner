@@ -91,9 +91,11 @@ func createVolumeSource(parameters *ZFSStorageClassParameters, dataset *zfs.Data
 		}
 	}
 	if parameters.HostPath != nil {
+		hostPathType := v1.HostPathDirectory
 		return v1.PersistentVolumeSource{
 			HostPath: &v1.HostPathVolumeSource{
 				Path: dataset.Mountpoint,
+				Type: &hostPathType,
 			},
 		}
 	}

@@ -107,6 +107,7 @@ func TestProvisionHostPath(t *testing.T) {
 	require.NotNil(t, pv.Spec.HostPath)
 	require.Nil(t, pv.Spec.NFS)
 	assert.Equal(t, "/"+expectedDataset, pv.Spec.HostPath.Path)
+	assert.Equal(t, v1.HostPathDirectory, pv.Spec.HostPath.Type)
 	assert.Contains(t, pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values, "node")
 }
 

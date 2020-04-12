@@ -1,16 +1,35 @@
-# kubernetes-zfs-provisioner
+# Dynamic ZFS provisioner for Kubernetes
 
-zfs-provisioner is an out of cluster external provisioner for Kubernetes.
-It creates ZFS datasets and shares them via NFS to make them mountable to pods.
-Currently all ZFS attributes are inherited from the parent dataset, different storage
-classes for e.g. cached/non-cached datasets or manually setting attributes via
-annotations should follow in the future.
+[![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Build)][build]
+![Go version](https://img.shields.io/github/go-mod/go-version/ccremer/kubernetes-zfs-provisioner)
+![Kubernetes version](https://img.shields.io/badge/k8s-v1.17-blue)
+[![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
+[![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
+[![Docker image](https://img.shields.io/docker/pulls/ccremer/zfs-provisioner)][dockerhub]
+[![License](https://img.shields.io/github/license/ccremer/kubernetes-zfs-provisioner)][license]
 
-This provisioner is considered highly **experimental** and is still under development.
+kubernetes-zfs-provisioner is a dynamic ZFS persistent volume provisioner for Kubernetes.
+It creates ZFS datasets on remote hosts and shares them via [NFS][nfs] to make them mountable to pods.
 
-For more information about external storage in kubernetes, see [kubernetes-incubator/external-storage](https://github.com/kubernetes-incubator/external-storage).
+Alternatively, if the ZFS hosts are part of the cluster, [HostPath][hostpath] is also possible,
+but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] configured.
 
-## Usage
+Currently all ZFS attributes are inherited from the parent dataset.
+
+This provisioner is considered highly **experimental** with an **unstable API**.
+
+For more information about external storage in kubernetes, see
+[kubernetes-sigs/sig-storage-lib-external-provisioner][lib provisioner].
+
+## Configuration
+
+The provisioner relies on an already set up Zpool and a dataset by the administrator.
+It also needs **SSH access** to the target ZFS hosts, i.e. mount the SSH private key and
+config to the container so that the executing user can find it.
+
+### Provisioner
+
+By **default the container image should work out of the box** when installed in the cluster,
 
 The provisioner can be configured via the following environment variables:
 
@@ -19,6 +38,7 @@ The provisioner can be configured via the following environment variables:
 | `ZFS_METRICS_PORT` | Port on which to export Prometheus metrics. | `8080` |
 | `ZFS_METRICS_ADDR` | Interface binding address on which to export Prometheus metrics. | `0.0.0.0` |
 | `ZFS_KUBE_CONFIG_PATH` | Kubeconfig file path in which the credentials and API URL are defined. | `` |
+| `ZFS_PROVISIONER_INSTANCE` | The instance name needs to be unique if multiple provisioners are deployed. | `pv.kubernetes.io/zfs` |
 
 Alternatively, provide a `zfs-provisioner.yaml` file in one of the following locations (first found):
 * /etc/kubernetes
@@ -27,39 +47,132 @@ Alternatively, provide a `zfs-provisioner.yaml` file in one of the following loc
 
 See `packaging/zfs-provisioner.yaml` for the configuration options and defaults.
 
-See Environment Variables for parameter description. Each entry can be overridden via Environment Variables, as they take
-precedence over the values configured in the YAML file.
+See Environment Variables for parameter description. Each entry can be overridden via Environment Variables, as they take precedence over the values configured in the YAML file.
+
+The provisioner instance name is also stored as a ZFS user property in the created
+dataset of the form `io.kubernetes.pv.zfs:managed_by` for system administrators, but is not
+further significant to the provisioner.
+
+### Storage Classes
+
+The provisioner relies on properly configured storage classes. The following shows an example
+for the [HostPath][hostpath] type.
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-hostpath
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Delete
+parameters:
+  parentDataset: tank/kubernetes
+  hostname: storage-1.domain.tld
+  type: hostpath
+  node: storage-1 # the kubernetes.io/hostname label if different than hostname parameter (optional)
+```
+
+Following example configures a storage class for ZFS over [NFS][nfs]:
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-nfs
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Retain
+parameters:
+  parentDataset: tank/kubernetes
+  hostname: storage-1.domain.tld
+  type: nfs
+  shareProperties: rw,no_root_squash # no_root_squash by default sets mode to 'ro'
+```
+For NFS, you can also specify other options, as described in [exports(5)][man exports].
 
 ## Notes
+
 ### Reclaim policy
 
-This provisioner currently supports the `Delete` and `Retain` reclaim policies.
+This provisioner supports the `Delete` and `Retain` reclaim policies, with `Delete` being
+default if unspecified. The reclaim policy is also stored as ZFS user property of the form
+`io.kubernetes.pv.zfs:reclaim_policy` for system administrators, but is not
+further significant to the provisioner.
 
 ### Storage space
 
-The provisioner uses the `reflimit` and `refquota` ZFS attributes to limit
+The provisioner uses the `refreservation` and `refquota` ZFS attributes to limit
 storage space for volumes. Each volume can not use more storage space than
 the given resource request and also reserves exactly that much. This means
 that over provisioning is not possible. Snapshots **do not** account for the
-storage space limit.
+storage space limit, however this provisioner does not do any snapshots or backups.
 
-See Oracles [ZFS Administration Guide](https://docs.oracle.com/cd/E23823_01/html/819-5461/gazvb.html) for more information.
+See [zfs(8)][man zfs] for more information.
+
+### Security
+
+First of all, no warranties and use at own risk.
+
+Making a container image and creating ZFS datasets from a container is not exactly
+easy, as ZFS runs in kernel. While it's possible to pass `/dev/zfs` to a container
+so it can create and destroy datasets within the container, sharing the volume with NFS
+does not work.
+
+Setting `sharenfs` property to anything other than `off` invokes [exportfs(8)][man exportfs],
+that requires also running the NFS Server to reload its exports. Which is not the case
+in a container (see [zfs(8)][man zfs]).
+
+But most importantly: Mounting `/dev/zfs` inside the provisioner container would mean that
+the datasets will only be created on the same host as the container currently runs.
+
+So, in order to "break out" of the container the `zfs` calls are wrapped and redirected
+to another host over **SSH**. This requires SSH private keys to be mounted in the container
+for a SSH user with sufficient permissions to run `zfs` commands on the target host.
+
+For increased performance and security install ZFS on all Kubernetes nodes thats should
+provide ZFS storage, as that creates `PersistentVolume` objects with [HostPath][hostpath].
+This eliminates network latency over unencrypted NFS, but schedules the pods to the ZFS hosts.
+
+If you prefer to run the provisioner uncontainerized as a Systemd service, install the
+package from the [releases][releases] page and provide a kubeconfig file with access
+to the target cluster.
 
 ## Development
 
 ### Requirements
 
-* go 1.14
+* go
 * goreleaser
+* docker
+* ZFS and NFS (run `make install_zfs` on Debian/Ubuntu if not already installed)
 
-The tests need to manage ZFS datasets, create a testing pool on a disk image:
+### Building
 
-```
-# Create a 10GB disk image
-dd if=/dev/zero bs=1024m count=10 of=disk.img
-# Mount the image as a block device, MacOS way
-hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount disk.img
-# Create zpool with mount in current directory
-sudo zpool create -m $PWD/test -f test /dev/disk2
-```
-For development under other operating systems, adapt mount command and block device.
+`make` with Goreleaser
+
+* downloads the dependencies
+* runs unit tests
+* compiles the binary
+* builds the docker image
+* builds the `deb` and `rpm` packages
+
+### Testing
+
+`make prepare`
+
+* Creates a new zpool with a dummy file for testing
+* Creates a new ZFS dataset for testing
+
+`make integration_test`
+
+* Runs the integration test suites against a locally set up zpool
+
+[build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ABuild
+[releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
+[license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
+[dockerhub]: https://hub.docker.com/r/ccremer/zfs-provisioner
+[node affinity]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity
+[lib provisioner]: https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner
+[hostpath]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+[nfs]: https://kubernetes.io/docs/concepts/storage/volumes/#nfs
+[man zfs]: https://linux.die.net/man/8/zfs
+[man exportfs]: https://linux.die.net/man/8/exportfs
+[man exports]: https://linux.die.net/man/5/exports
