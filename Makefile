@@ -8,11 +8,8 @@ zpool_name_file := $(zpool_dir)/zpool.nfo
 zpool_name := $(shell bash -c "cat .zpool/zpool.nfo || echo test$$RANDOM")
 zfs_dataset := $(zpool_name)/zfs-provisioner
 
-goreleaser_cmd ?= goreleaser release --snapshot --rm-dist --skip-sign
-go_unit_test_cmd ?= go test -coverprofile c.out ./...
-
 build:
-	$(goreleaser_cmd)
+	goreleaser release --snapshot --rm-dist --skip-sign
 
 install_zfs:
 	sudo apt update
@@ -45,7 +42,7 @@ uninstall:
 	sudo apt remove -y -m kubernetes-zfs-provisioner
 
 test:
-	$(go_unit_test_cmd)
+	go test -coverprofile c.out ./...
 
 integration_test: prepare
 	sudo sh -c "go env -w GOPATH=$$(go env GOPATH) && go test -v ./test/... -integration -parentDataset $(zfs_dataset)"

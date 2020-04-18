@@ -21,6 +21,10 @@ This provisioner is considered highly **experimental** with an **unstable API**.
 For more information about external storage in kubernetes, see
 [kubernetes-sigs/sig-storage-lib-external-provisioner][lib provisioner].
 
+## Installation
+
+Recommended option is the [Helm Chart][helm chart].
+
 ## Configuration
 
 The provisioner relies on an already set up Zpool and a dataset by the administrator.
@@ -30,7 +34,7 @@ config to the container so that the executing user can find it.
 ### Provisioner
 
 By **default the container image should work out of the box** when installed in the cluster.
-The only thing to configure is SSH.
+The only thing to configure is SSH, the [Helm Chart][helm chart] should help you with that.
 
 The provisioner can be configured via the following environment variables:
 
@@ -163,3 +167,4 @@ This eliminates network latency over unencrypted NFS, but schedules the pods to 
 [man zfs]: https://linux.die.net/man/8/zfs
 [man exportfs]: https://linux.die.net/man/8/exportfs
 [man exports]: https://linux.die.net/man/5/exports
+[helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
