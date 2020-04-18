@@ -70,11 +70,6 @@ func main() {
 func configureViper() {
 	viper.SetEnvPrefix("zfs")
 	viper.AutomaticEnv()
-	viper.SetConfigName("zfs-provisioner")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/etc/kubernetes")
-	viper.AddConfigPath("/var/lib/kubernetes-zfs-provisioner")
-	viper.AddConfigPath(".")
 	viper.SetDefault(metricsPortKey, "8080")
 	viper.SetDefault(metricsAddrKey, "0.0.0.0")
 	viper.SetDefault(kubeConfigPathKey, "")
