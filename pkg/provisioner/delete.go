@@ -18,14 +18,7 @@ func (p *ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
 	datasetPath := volume.ObjectMeta.Annotations[DatasetPathAnnotation]
 	zfsHost := volume.ObjectMeta.Annotations[ZFSHostAnnotation]
 
-	klog.V(3).Info("acquiring lock...")
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	if err := setEnvironmentVars(zfsHost, false, datasetPath); err != nil {
-		return err
-	}
-
-	err := p.zfs.DestroyDataset(&zfs.Dataset{Name: datasetPath}, zfs.DestroyRecursively)
+	err := p.zfs.DestroyDataset(&zfs.Dataset{Name: datasetPath, Hostname: zfsHost}, zfs.DestroyRecursively)
 	if err != nil {
 		return fmt.Errorf("error destroying dataset: %w", err)
 	}

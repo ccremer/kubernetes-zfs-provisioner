@@ -22,6 +22,6 @@ jobs:
       run: docker login -u ${{ secrets.DOCKER_HUB_USER }} -p ${{ secrets.DOCKER_HUB_TOKEN }}
     - uses: goreleaser/goreleaser-action@v1
       with:
-        args: release
+        args: release --release-footer=.github/release-footer.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

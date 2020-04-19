@@ -28,24 +28,9 @@ dockers:
   - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
   - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
   extra_files:
-  - packaging/zfs.sh
-
-nfpms:
-- vendor: ccremer
-  homepage: https://github.com/ccremer/kubernetes-zfs-provisioner
-  maintainer: ccremer
-  description: A ZFS persistent volume provisioner for Kubernetes
-  license: Apache 2.0
-  file_name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-  formats:
-  - deb
-  files:
-    "packaging/zfs-provisioner.service": /lib/systemd/system/zfs-provisioner.service
-    "packaging/zfs-provisioner.yaml": /var/lib/kubernetes-zfs-provisioner/zfs-provisioner.yaml
-  scripts:
-    postinstall: "packaging/postinstall.sh"
-    preremove: "packaging/preremove.sh"
-    postremove: "packaging/postremove.sh"
+  - docker/zfs.sh
+  - docker/update-permissions.sh
+  dockerfile: docker/Dockerfile
 
 changelog:
   sort: asc

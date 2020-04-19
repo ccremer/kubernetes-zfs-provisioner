@@ -7,14 +7,15 @@ import (
 	"github.com/stretchr/testify/require"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os"
 	"testing"
 )
 
 func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testing.T) {
 	expectedDataset := "test/volumes/pv-testcreate"
+	expectedHost := "host"
 	dataset := &zfs.Dataset{
-		Name:       expectedDataset,
+		Name:     expectedDataset,
+		Hostname: expectedHost,
 	}
 	stub := new(zfsStub)
 	stub.On("DestroyDataset", dataset, zfs.DestroyFlag(gozfs.DestroyRecursive)).
@@ -22,12 +23,11 @@ func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testin
 	p, _ := NewZFSProvisionerStub(stub)
 	pv := core.PersistentVolume{ObjectMeta: v1.ObjectMeta{Annotations: map[string]string{
 		DatasetPathAnnotation: expectedDataset,
-		ZFSHostAnnotation:     "host",
+		ZFSHostAnnotation:     expectedHost,
 	}}}
 	result := p.Delete(&pv)
 	require.NoError(t, result)
 	stub.AssertExpectations(t)
-	assert.Equal(t, "host", os.Getenv(ZFSHostEnvVar))
 }
 
 func TestDelete_GivenVolume_WhenAnnotationMissing_ThenThrowError(t *testing.T) {

@@ -21,6 +21,10 @@ This provisioner is considered highly **experimental** with an **unstable API**.
 For more information about external storage in kubernetes, see
 [kubernetes-sigs/sig-storage-lib-external-provisioner][lib provisioner].
 
+## Installation
+
+Recommended option is the [Helm Chart][helm chart].
+
 ## Configuration
 
 The provisioner relies on an already set up Zpool and a dataset by the administrator.
@@ -29,7 +33,8 @@ config to the container so that the executing user can find it.
 
 ### Provisioner
 
-By **default the container image should work out of the box** when installed in the cluster,
+By **default the container image should work out of the box** when installed in the cluster.
+The only thing to configure is SSH, the [Helm Chart][helm chart] should help you with that.
 
 The provisioner can be configured via the following environment variables:
 
@@ -39,15 +44,6 @@ The provisioner can be configured via the following environment variables:
 | `ZFS_METRICS_ADDR` | Interface binding address on which to export Prometheus metrics. | `0.0.0.0` |
 | `ZFS_KUBE_CONFIG_PATH` | Kubeconfig file path in which the credentials and API URL are defined. | `` |
 | `ZFS_PROVISIONER_INSTANCE` | The instance name needs to be unique if multiple provisioners are deployed. | `pv.kubernetes.io/zfs` |
-
-Alternatively, provide a `zfs-provisioner.yaml` file in one of the following locations (first found):
-* /etc/kubernetes
-* /var/lib/kubernetes-zfs-provisioner (default file included in `deb` package)
-* $PWD (current work dir)
-
-See `packaging/zfs-provisioner.yaml` for the configuration options and defaults.
-
-See Environment Variables for parameter description. Each entry can be overridden via Environment Variables, as they take precedence over the values configured in the YAML file.
 
 The provisioner instance name is also stored as a ZFS user property in the created
 dataset of the form `io.kubernetes.pv.zfs:managed_by` for system administrators, but is not
@@ -131,10 +127,6 @@ For increased performance and security install ZFS on all Kubernetes nodes thats
 provide ZFS storage, as that creates `PersistentVolume` objects with [HostPath][hostpath].
 This eliminates network latency over unencrypted NFS, but schedules the pods to the ZFS hosts.
 
-If you prefer to run the provisioner uncontainerized as a Systemd service, install the
-package from the [releases][releases] page and provide a kubeconfig file with access
-to the target cluster.
-
 ## Development
 
 ### Requirements
@@ -152,7 +144,6 @@ to the target cluster.
 * runs unit tests
 * compiles the binary
 * builds the docker image
-* builds the `deb` and `rpm` packages
 
 ### Testing
 
@@ -176,3 +167,4 @@ to the target cluster.
 [man zfs]: https://linux.die.net/man/8/zfs
 [man exportfs]: https://linux.die.net/man/8/exportfs
 [man exports]: https://linux.die.net/man/5/exports
+[helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/

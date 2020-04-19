@@ -4,7 +4,6 @@ import (
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	"github.com/stretchr/testify/require"
 	storagev1 "k8s.io/api/storage/v1"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,19 +16,22 @@ import (
 func TestProvisionNfs(t *testing.T) {
 
 	expectedShareProperties := "rw=@10.0.0.0/8"
-	expectedDataset := "test/volumes/pv-testcreate"
 	expectedHost := "host"
+	expectedDatasetName := "test/volumes/pv-testcreate"
+	expectedDataset := &zfs.Dataset{
+		Name:       expectedDatasetName,
+		Hostname:   expectedHost,
+		Mountpoint: "/" + expectedDatasetName,
+	}
 	stub := new(zfsStub)
-	stub.On("CreateDataset", expectedDataset, map[string]string{
+	stub.On("CreateDataset", expectedDatasetName, map[string]string{
 		RefQuotaProperty:       "1000000000",
 		RefReservationProperty: "1000000000",
 		"sharenfs":             "rw=@10.0.0.0/8",
 		ManagedByProperty:      "test",
 		ReclaimPolicyProperty:  string(v1.PersistentVolumeReclaimDelete),
-	}).Return(&zfs.Dataset{
-		Name:       expectedDataset,
-		Mountpoint: "/" + expectedDataset,
-	}, nil)
+	}).Return(expectedDataset, nil)
+	stub.On("SetPermissions", expectedDataset).Return(nil)
 
 	p, _ := NewZFSProvisionerStub(stub)
 	options := controller.ProvisionOptions{
@@ -47,14 +49,14 @@ func TestProvisionNfs(t *testing.T) {
 
 	pv, err := p.Provision(options)
 	require.NoError(t, err)
-	assertBasics(t, stub, pv, expectedDataset, expectedHost)
+	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
 
 	assert.Equal(t, v1.PersistentVolumeReclaimDelete, pv.Spec.PersistentVolumeReclaimPolicy)
 
 	require.NotNil(t, pv.Spec.NFS)
 	require.Nil(t, pv.Spec.HostPath)
 	require.Nil(t, pv.Spec.NodeAffinity)
-	assert.Equal(t, "/"+expectedDataset, pv.Spec.NFS.Path)
+	assert.Equal(t, "/"+expectedDatasetName, pv.Spec.NFS.Path)
 	assert.Equal(t, expectedHost, pv.Spec.NFS.Server)
 }
 
@@ -68,24 +70,25 @@ func assertBasics(t *testing.T, stub *zfsStub, pv *v1.PersistentVolume, expected
 	assert.Contains(t, pv.Annotations, "my/annotation")
 	assert.Equal(t, expectedDataset, pv.Annotations[DatasetPathAnnotation])
 	assert.Equal(t, expectedHost, pv.Annotations[ZFSHostAnnotation])
-	assert.Equal(t, expectedHost, os.Getenv(ZFSHostEnvVar))
 }
 
 func TestProvisionHostPath(t *testing.T) {
 
-	expectedDataset := "test/volumes/pv-testcreate"
+	expectedDatasetName := "test/volumes/pv-testcreate"
+	expectedDataset := &zfs.Dataset{
+		Name:       expectedDatasetName,
+		Mountpoint: "/" + expectedDatasetName,
+	}
 	expectedHost := "host"
 	policy := v1.PersistentVolumeReclaimRetain
 	stub := new(zfsStub)
-	stub.On("CreateDataset", expectedDataset, map[string]string{
+	stub.On("CreateDataset", expectedDatasetName, map[string]string{
 		RefQuotaProperty:       "1000000000",
 		RefReservationProperty: "1000000000",
 		ManagedByProperty:      "test",
 		ReclaimPolicyProperty:  string(policy),
-	}).Return(&zfs.Dataset{
-		Name:       expectedDataset,
-		Mountpoint: "/" + expectedDataset,
-	}, nil)
+	}).Return(expectedDataset, nil)
+	stub.On("SetPermissions", expectedDataset).Return(nil)
 
 	p, _ := NewZFSProvisionerStub(stub)
 	options := controller.ProvisionOptions{
@@ -104,14 +107,14 @@ func TestProvisionHostPath(t *testing.T) {
 
 	pv, err := p.Provision(options)
 	require.NoError(t, err)
-	assertBasics(t, stub, pv, expectedDataset, expectedHost)
+	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
 
 	assert.Equal(t, policy, pv.Spec.PersistentVolumeReclaimPolicy)
 
 	hostPathType := v1.HostPathDirectory
 	require.NotNil(t, pv.Spec.HostPath)
 	require.Nil(t, pv.Spec.NFS)
-	assert.Equal(t, "/"+expectedDataset, pv.Spec.HostPath.Path)
+	assert.Equal(t, "/"+expectedDatasetName, pv.Spec.HostPath.Path)
 	assert.Equal(t, &hostPathType, pv.Spec.HostPath.Type)
 	assert.Contains(t, pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values, "node")
 }
