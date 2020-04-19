@@ -29,6 +29,7 @@ dockers:
   - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
   extra_files:
   - docker/zfs.sh
+  - docker/update-permissions.sh
   dockerfile: docker/Dockerfile
 
 changelog:

@@ -3,14 +3,5 @@
 set -eo pipefail
 
 zfs_bin=${ZFS_BIN:-/sbin/zfs}
-zfs_mod="${ZFS_MOD:-g+w}"
-
-zfs_dataset="${ZFS_DATASET}"
-zfs_update_permissions="${ZFS_UPDATE_PERMISSIONS:-yes}"
 
 ${zfs_bin} ${@}
-
-if [[ ${zfs_update_permissions} == "yes" ]]; then
-  mountpoint=$(${zfs_bin} get -H -o value mountpoint ${zfs_dataset})
-  chmod ${zfs_mod} ${mountpoint} > /dev/null
-fi

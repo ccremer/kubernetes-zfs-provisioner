@@ -42,16 +42,12 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 	properties[ManagedByProperty] = p.InstanceName
 	properties[ReclaimPolicyProperty] = string(reclaimPolicy)
 
-	klog.V(3).Info("acquiring lock...")
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	err = setEnvironmentVars(parameters.Hostname, true, datasetPath)
-	if err != nil {
-		return nil, err
-	}
-	dataset, err := p.zfs.CreateDataset(datasetPath, properties)
+	dataset, err := p.zfs.CreateDataset(datasetPath, parameters.Hostname, properties)
 	if err != nil {
 		return nil, fmt.Errorf("creating ZFS dataset failed: %w", err)
+	}
+	if err := p.zfs.SetPermissions(dataset); err != nil {
+		return nil, err
 	}
 	klog.Infof("dataset \"%s\": created", dataset.Name)
 

@@ -7,6 +7,7 @@ RUN \
     adduser -S zfs -G root
 
 COPY docker/zfs.sh /usr/bin/zfs
+COPY docker/update-permissions.sh /usr/bin/update-permissions
 COPY kubernetes-zfs-provisioner /usr/bin/
 
 USER zfs:root

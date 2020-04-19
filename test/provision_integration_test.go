@@ -11,8 +11,10 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"math/rand"
 	"os"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -30,7 +32,7 @@ type ProvisionTestSuit struct {
 func TestProvisionSuite(t *testing.T) {
 	if integrationTest {
 		s := ProvisionTestSuit{
-			dataset: "pv-test",
+			dataset: "pv-test-" + strconv.Itoa(rand.Int()),
 		}
 		suite.Run(t, &s)
 	} else {
@@ -49,8 +51,10 @@ func (suite *ProvisionTestSuit) SetupSuite() {
 }
 
 func (suite *ProvisionTestSuit) TearDownSuite() {
-	os.Setenv(provisioner.ZFSUpdatePermissionsEnvVar, "no")
-	err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{Name: *parentDataset + "/" + suite.dataset}, zfs.DestroyRecursively)
+	err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
+		Name:     *parentDataset + "/" + suite.dataset,
+		Hostname: "host",
+	}, zfs.DestroyRecursively)
 	require.NoError(suite.T(), err)
 }
 
