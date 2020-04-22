@@ -173,3 +173,25 @@ This eliminates network latency over unencrypted NFS, but schedules the pods to 
 [man exportfs]: https://linux.die.net/man/8/exportfs
 [man exports]: https://linux.die.net/man/5/exports
 [helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
+
+## Troubleshooting
+
+### Filesystem created, but not shared
+
+```
+controller.go:920] error syncing claim "56ea786a-e376-4911-a4b1-7b040dc3537f": failed to provision volume
+with StorageClass "zfs-retain-pve-1": creating ZFS dataset failed: exit status 1:
+"/usr/bin/zfs zfs create -o sharenfs=rw,no_root_squash ... tank/kubernetes/
+pvc-56ea786a-e376-4911-a4b1-7b040dc3537f" => cannot share 'tank/kubernetes/
+pvc-56ea786a-e376-4911-a4b1-7b040dc3537f': share(1M) failed
+filesystem successfully created, but not shared
+```
+This happens when the dataset got created, but invoking `zfs share` is failing.
+Most likely because from [zfs(8)][man zfs] it's stated that [exportfs(8)][man exportfs] is invoked,
+which talks to the NFS server. So, have you got `nfs-kernel-server` installed on the host and is
+`exportfs` available?
+
+Once you solve this, destroy the dataset again, as the following retries will fail forever:
+```
+cannot create 'tank/services/kubernetes/pvc-56ea786a-e376-4911-a4b1-7b040dc3537f': dataset already exists
+```
