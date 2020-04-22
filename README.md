@@ -123,9 +123,14 @@ So, in order to "break out" of the container the `zfs` calls are wrapped and red
 to another host over **SSH**. This requires SSH private keys to be mounted in the container
 for a SSH user with sufficient permissions to run `zfs` commands on the target host.
 
+Example sudoers file in `/etc/sudoers.d/zfs-provisioner` (On the ZFS host):
+```
+zfs-provisioner ALL=(ALL) NOPASSWD:/sbin/zfs *,/bin/chmod *
+```
+
 For increased performance and security install ZFS on all Kubernetes nodes thats should
-provide ZFS storage, as that creates `PersistentVolume` objects with [HostPath][hostpath].
-This eliminates network latency over unencrypted NFS, but schedules the pods to the ZFS hosts.
+provide ZFS storage. Then it's possible to create `PersistentVolume` objects with [HostPath][hostpath].
+This eliminates network latency over unencrypted NFS, but schedules the pods to the ZFS hosts only.
 
 ## Development
 
