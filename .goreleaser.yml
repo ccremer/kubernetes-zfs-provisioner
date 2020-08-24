@@ -3,6 +3,7 @@
 before:
   hooks:
   - go vet ./...
+  - go fmt ./...
   - go test -coverprofile c.out ./...
 
 builds:
@@ -27,6 +28,8 @@ dockers:
 - image_templates:
   - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
   - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
+  - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}"
+  - "quay.io/ccremer/zfs-provisioner:v{{ .Major }}"
   extra_files:
   - docker/zfs.sh
   - docker/update-permissions.sh

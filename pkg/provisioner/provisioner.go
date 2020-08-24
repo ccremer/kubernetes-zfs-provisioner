@@ -5,13 +5,13 @@ import (
 )
 
 const (
-	DatasetPathAnnotation      = "zfs.pv.kubernetes.io/zfs-dataset-path"
-	ZFSHostAnnotation          = "zfs.pv.kubernetes.io/zfs-host"
+	DatasetPathAnnotation = "zfs.pv.kubernetes.io/zfs-dataset-path"
+	ZFSHostAnnotation     = "zfs.pv.kubernetes.io/zfs-host"
 
-	RefQuotaProperty           = "refquota"
-	RefReservationProperty     = "refreservation"
-	ManagedByProperty          = "io.kubernetes.pv.zfs:managed_by"
-	ReclaimPolicyProperty      = "io.kubernetes.pv.zfs:reclaim_policy"
+	RefQuotaProperty       = "refquota"
+	RefReservationProperty = "refreservation"
+	ManagedByProperty      = "io.kubernetes.pv.zfs:managed_by"
+	ReclaimPolicyProperty  = "io.kubernetes.pv.zfs:reclaim_policy"
 )
 
 // ZFSProvisioner implements the Provisioner interface to create and export ZFS volumes
