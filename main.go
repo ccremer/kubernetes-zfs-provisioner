@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
+	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
 	"k8s.io/klog"
 	"net/http"
+	"strings"
 
-	"github.com/spf13/viper"
-	"k8s.io/apimachinery/pkg/util/wait"
+	"github.com/knadh/koanf"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 const (
@@ -21,14 +24,16 @@ const (
 
 var (
 	// These will be populated by Goreleaser at build time
-	version = "snapshot"
-	commit  = "dirty"
+	version       = "snapshot"
+	commit        = "dirty"
+	koanfInstance = koanf.New(".")
 )
 
 func main() {
-	configureViper()
+	loadDefaultValues()
+	loadEnvironmentVariables()
 
-	config, err := clientcmd.BuildConfigFromFlags("", viper.GetString("kube_config_path"))
+	config, err := clientcmd.BuildConfigFromFlags("", koanfInstance.String("kube_config_path"))
 	if err != nil {
 		klog.Fatalf("Couldn't get in-cluster or kubectl config: %v", err)
 	}
@@ -43,7 +48,7 @@ func main() {
 		klog.Fatalf("Failed retrieving server version: %v", err)
 	}
 
-	instance := viper.GetString(provisionerInstanceKey)
+	instance := koanfInstance.String(provisionerInstanceKey)
 	klog.Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
 	p, err := provisioner.NewZFSProvisioner(instance)
 	if err != nil {
@@ -59,24 +64,31 @@ func main() {
 		instance,
 		p,
 		serverVersion.GitVersion,
-		controller.MetricsAddress(viper.GetString(metricsAddrKey)),
-		controller.MetricsPort(viper.GetInt32(metricsPortKey)),
+		controller.MetricsAddress(koanfInstance.String(metricsAddrKey)),
+		controller.MetricsPort(int32(koanfInstance.Int(metricsPortKey))),
 	)
 
 	klog.Infof("Starting provisioner version \"%s\" commit \"%s\"", version, commit)
-	pc.Run(wait.NeverStop)
+	pc.Run(context.Background())
 }
 
-func configureViper() {
-	viper.SetEnvPrefix("zfs")
-	viper.AutomaticEnv()
-	viper.SetDefault(metricsPortKey, "8080")
-	viper.SetDefault(metricsAddrKey, "0.0.0.0")
-	viper.SetDefault(kubeConfigPathKey, "")
-	viper.SetDefault(provisionerInstanceKey, "pv.kubernetes.io/zfs")
+func loadDefaultValues() {
+	_ = koanfInstance.Load(confmap.Provider(map[string]interface{}{
+		metricsPortKey:         "8080",
+		metricsAddrKey:         "0.0.0.0",
+		kubeConfigPathKey:      "",
+		provisionerInstanceKey: "pv.kubernetes.io/zfs",
+	}, "."), nil)
+}
 
-	err := viper.ReadInConfig()
+func loadEnvironmentVariables() {
+	prefix := "ZFS_"
+	err := koanfInstance.Load(env.Provider(prefix, ".", func(s string) string {
+		s = strings.TrimPrefix(s, prefix)
+		s = strings.Replace(strings.ToLower(s), "_", "-", -1)
+		return s
+	}), nil)
 	if err != nil {
-		klog.Warningf("Could not read config file: %v", err)
+		klog.Fatalf("Could not load environment variables: %v", err)
 	}
 }

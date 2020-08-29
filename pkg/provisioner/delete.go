@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	core "k8s.io/api/core/v1"
@@ -8,7 +9,7 @@ import (
 )
 
 // Delete removes a given volume from the server
-func (p *ZFSProvisioner) Delete(volume *core.PersistentVolume) error {
+func (p *ZFSProvisioner) Delete(ctx context.Context, volume *core.PersistentVolume) error {
 	for _, annotation := range []string{DatasetPathAnnotation, ZFSHostAnnotation} {
 		value := volume.ObjectMeta.Annotations[annotation]
 		if value == "" {

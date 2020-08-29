@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	"k8s.io/klog"
@@ -8,14 +9,14 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 // Provision creates a PersistentVolume, sets quota and shares it via NFS.
-func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.PersistentVolume, error) {
+func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.ProvisionOptions) (*v1.PersistentVolume, controller.ProvisioningState, error) {
 	parameters, err := NewStorageClassParameters(options.StorageClass.Parameters)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse StorageClass parameters: %w", err)
+		return nil, controller.ProvisioningNoChange, fmt.Errorf("failed to parse StorageClass parameters: %w", err)
 	}
 
 	datasetPath := fmt.Sprintf("%s/%s", parameters.ParentDataset, options.PVName)
@@ -30,7 +31,7 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 		// Default is delete, see https://kubernetes.io/docs/concepts/storage/storage-classes/#reclaim-policy
 		reclaimPolicy = v1.PersistentVolumeReclaimDelete
 	} else if *options.StorageClass.ReclaimPolicy == v1.PersistentVolumeReclaimRecycle {
-		return nil, fmt.Errorf("unsupported reclaim policy of this provisioner: %s", v1.PersistentVolumeReclaimRecycle)
+		return nil, controller.ProvisioningFinished, fmt.Errorf("unsupported reclaim policy of this provisioner: %s", v1.PersistentVolumeReclaimRecycle)
 	} else {
 		reclaimPolicy = *options.StorageClass.ReclaimPolicy
 	}
@@ -44,10 +45,10 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 
 	dataset, err := p.zfs.CreateDataset(datasetPath, parameters.Hostname, properties)
 	if err != nil {
-		return nil, fmt.Errorf("creating ZFS dataset failed: %w", err)
+		return nil, controller.ProvisioningFinished, fmt.Errorf("creating ZFS dataset failed: %w", err)
 	}
 	if err := p.zfs.SetPermissions(dataset); err != nil {
-		return nil, err
+		return nil, controller.ProvisioningFinished, err
 	}
 	klog.Infof("dataset \"%s\": created", dataset.Name)
 
@@ -75,7 +76,7 @@ func (p *ZFSProvisioner) Provision(options controller.ProvisionOptions) (*v1.Per
 			NodeAffinity:           createNodeAffinity(parameters),
 		},
 	}
-	return pv, nil
+	return pv, controller.ProvisioningFinished, nil
 }
 
 func createVolumeSource(parameters *ZFSStorageClassParameters, dataset *zfs.Dataset) v1.PersistentVolumeSource {
