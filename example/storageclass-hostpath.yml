@@ -1,0 +1,11 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-retain
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Retain
+parameters:
+  parentDataset: tank/services/kubernetes
+  hostname: zfs-host.intern
+  type: hostpath
+  node: zfs-host

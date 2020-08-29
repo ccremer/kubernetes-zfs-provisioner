@@ -1,10 +1,10 @@
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: example
+  name: example-nfs
+  namespace: zfs-system
 spec:
-  storageClassName: zfs
+  storageClassName: zfs-nfs
   accessModes:
     - ReadWriteMany
   resources:

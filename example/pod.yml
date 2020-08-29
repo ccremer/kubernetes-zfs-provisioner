@@ -1,23 +1,33 @@
----
 kind: Pod
 apiVersion: v1
 metadata:
-  name: example
+  name: zfs-example
   namespace: zfs-system
 spec:
+  securityContext:
+    #runAsUser: 1000
+    fsGroup: 0
+    #runAsGroup: 1000
   containers:
   - name: example
     image: busybox
+    securityContext:
+      runAsUser: 1000
     command:
       - "/bin/sh"
+    env:
+      - name: DIR
+        value: /tmp/pv
+      - name: FILE
+        value: /tmp/pv/SUCCESS
     args:
       - "-c"
-      - "sleep 10; if [ -e /mnt/SUCCESS ]; then echo 'file already exists'; exit 0; else echo 'file does not exist attempting to create it'; whoami && touch /mnt/SUCCESS && exit 0 || exit 1; fi"
+      - "id; mount; ls -lah ${DIR}; sleep 5; date > ${FILE} && chmod +w ${FILE}"
     volumeMounts:
       - name: zfs-volume
-        mountPath: "/mnt"
+        mountPath: "/tmp/pv"
   restartPolicy: "Never"
   volumes:
     - name: zfs-volume
       persistentVolumeClaim:
-        claimName: example-pvc
+        claimName: example-nfs

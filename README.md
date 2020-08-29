@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/github/license/ccremer/kubernetes-zfs-provisioner)][license]
 
 kubernetes-zfs-provisioner is a dynamic ZFS persistent volume provisioner for Kubernetes.
-It creates ZFS datasets on remote hosts and shares them via [NFS][nfs] to make them mountable to pods.
+It creates ZFS datasets via SSH on remote hosts and shares them via [NFS][nfs] to make them mountable to pods.
 
 Alternatively, if the ZFS hosts are part of the cluster, [HostPath][hostpath] is also possible,
 but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] configured.

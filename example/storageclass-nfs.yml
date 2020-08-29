@@ -1,0 +1,11 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-nfs
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Delete
+parameters:
+  parentDataset: tank/services/kubernetes
+  hostname: pve-2.intern
+  type: nfs
+  shareProperties: rw,no_root_squash
