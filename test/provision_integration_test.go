@@ -2,6 +2,7 @@ package test
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
@@ -13,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"math/rand"
 	"os"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 	"strconv"
 	"strings"
 	"testing"
@@ -76,7 +77,7 @@ func (suite *ProvisionTestSuit) TestProvisionDataset() {
 		},
 	}
 
-	_, err := suite.p.Provision(options)
+	_, _, err := suite.p.Provision(context.Background(), options)
 	assert.NoError(t, err)
 	require.DirExists(t, fullDataset)
 	assertNfsExport(t, fullDataset)

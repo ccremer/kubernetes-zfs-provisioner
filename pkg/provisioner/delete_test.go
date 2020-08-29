@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	gozfs "github.com/mistifyio/go-zfs"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testin
 		DatasetPathAnnotation: expectedDataset,
 		ZFSHostAnnotation:     expectedHost,
 	}}}
-	result := p.Delete(&pv)
+	result := p.Delete(context.Background(), &pv)
 	require.NoError(t, result)
 	stub.AssertExpectations(t)
 }
@@ -34,7 +35,7 @@ func TestDelete_GivenVolume_WhenAnnotationMissing_ThenThrowError(t *testing.T) {
 	stub := new(zfsStub)
 	p, _ := NewZFSProvisionerStub(stub)
 	pv := core.PersistentVolume{}
-	err := p.Delete(&pv)
+	err := p.Delete(context.Background(), &pv)
 	require.Error(t, err)
 	stub.AssertExpectations(t)
 	assert.Contains(t, err.Error(), "annotation")

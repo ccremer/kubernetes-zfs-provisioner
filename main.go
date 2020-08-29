@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
@@ -9,10 +10,9 @@ import (
 	"strings"
 
 	"github.com/knadh/koanf"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 const (
@@ -24,8 +24,8 @@ const (
 
 var (
 	// These will be populated by Goreleaser at build time
-	version = "snapshot"
-	commit  = "dirty"
+	version       = "snapshot"
+	commit        = "dirty"
 	koanfInstance = koanf.New(".")
 )
 
@@ -69,7 +69,7 @@ func main() {
 	)
 
 	klog.Infof("Starting provisioner version \"%s\" commit \"%s\"", version, commit)
-	pc.Run(wait.NeverStop)
+	pc.Run(context.Background())
 }
 
 func loadDefaultValues() {
@@ -89,6 +89,6 @@ func loadEnvironmentVariables() {
 		return s
 	}), nil)
 	if err != nil {
-		klog.Fatalf("Could not load environment variables: %w", err)
+		klog.Fatalf("Could not load environment variables: %v", err)
 	}
 }

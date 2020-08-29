@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	"github.com/stretchr/testify/require"
 	storagev1 "k8s.io/api/storage/v1"
@@ -10,7 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
 )
 
 func TestProvisionNfs(t *testing.T) {
@@ -47,7 +48,7 @@ func TestProvisionNfs(t *testing.T) {
 		},
 	}
 
-	pv, err := p.Provision(options)
+	pv, _, err := p.Provision(context.Background(), options)
 	require.NoError(t, err)
 	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
 
@@ -105,7 +106,7 @@ func TestProvisionHostPath(t *testing.T) {
 		},
 	}
 
-	pv, err := p.Provision(options)
+	pv, _, err := p.Provision(context.Background(), options)
 	require.NoError(t, err)
 	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
 
