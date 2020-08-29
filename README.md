@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Build)][build]
 ![Go version](https://img.shields.io/github/go-mod/go-version/ccremer/kubernetes-zfs-provisioner)
-![Kubernetes version](https://img.shields.io/badge/k8s-v1.17-blue)
+![Kubernetes version](https://img.shields.io/badge/k8s-v1.18-blue)
 [![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
 [![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
 [![Docker image](https://img.shields.io/docker/pulls/ccremer/zfs-provisioner)][dockerhub]
