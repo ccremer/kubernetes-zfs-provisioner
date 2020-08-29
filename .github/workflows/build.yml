@@ -10,31 +10,51 @@ on:
   pull_request:
     types: [opened, reopened]
 
+env:
+  GO_VERSION: "^1.14.3"
+
 jobs:
-  goreleaser:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-go@v2-beta
-      with:
-        go-version: '^1.14.3'
-    - uses: actions/cache@v1
-      with:
-        path: /home/runner/go/pkg/mod
-        key: go-mod-build
-    - uses: goreleaser/goreleaser-action@v1
-      with:
-        args: release --snapshot --skip-sign
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Build
+        run: make build
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/cache@v1
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - uses: goreleaser/goreleaser-action@v1
+        with:
+          args: release --snapshot --skip-sign
 
   integration-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-go@v2-beta
-      with:
-        go-version: '^1.14.3'
-    - uses: actions/cache@v1
-      with:
-        path: /home/runner/go/pkg/mod
-        key: go-mod-integration
-    - run: make install_zfs integration_test
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2-beta
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/cache@v1
+        with:
+          path: /home/runner/go/pkg/mod
+          key: go-mod-integration
+      - run: make install_zfs integration_test

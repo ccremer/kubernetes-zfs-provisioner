@@ -1,4 +1,4 @@
-.PHONY: build install_zfs prepare install clean uninstall test integration_test
+.PHONY: build dist install_zfs prepare install clean uninstall test integration_test
 SHELL := /usr/bin/env bash
 
 ZPOOL_SIZE=1 # in GB
@@ -8,7 +8,10 @@ zpool_name_file := $(zpool_dir)/zpool.nfo
 zpool_name := $(shell bash -c "cat .zpool/zpool.nfo || echo test$$RANDOM")
 zfs_dataset := $(zpool_name)/zfs-provisioner
 
-build:
+build: test
+	go build ./...
+
+dist:
 	goreleaser release --snapshot --rm-dist --skip-sign
 
 install_zfs:
@@ -31,7 +34,7 @@ $(zpool_name_file): $(zpool_dir)
 
 prepare: /$(zfs_dataset)
 
-install: build
+install: dist
 	sudo dpkg -i dist/kubernetes-zfs-provisioner_linux_amd64.deb
 
 clean:
