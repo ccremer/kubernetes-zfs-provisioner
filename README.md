@@ -161,19 +161,6 @@ This eliminates network latency over unencrypted NFS, but schedules the pods to 
 
 * Runs the integration test suites against a locally set up zpool
 
-[build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ABuild
-[releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
-[license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
-[dockerhub]: https://hub.docker.com/r/ccremer/zfs-provisioner
-[node affinity]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity
-[lib provisioner]: https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner
-[hostpath]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
-[nfs]: https://kubernetes.io/docs/concepts/storage/volumes/#nfs
-[man zfs]: https://linux.die.net/man/8/zfs
-[man exportfs]: https://linux.die.net/man/8/exportfs
-[man exports]: https://linux.die.net/man/5/exports
-[helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
-
 ## Troubleshooting
 
 ### Filesystem created, but not shared
@@ -195,3 +182,26 @@ Once you solve this, destroy the dataset again, as the following retries will fa
 ```
 cannot create 'tank/services/kubernetes/pvc-56ea786a-e376-4911-a4b1-7b040dc3537f': dataset already exists
 ```
+
+## Credits
+
+Thanks to [Gentics][gentics] for open sourcing the [initial version][gentics repo]!
+
+I have been [allowed to take over maintenance for this repository][gentics discussion].
+
+
+[build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ABuild
+[releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
+[license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
+[dockerhub]: https://hub.docker.com/r/ccremer/zfs-provisioner
+[node affinity]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity
+[lib provisioner]: https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner
+[hostpath]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
+[nfs]: https://kubernetes.io/docs/concepts/storage/volumes/#nfs
+[man zfs]: https://linux.die.net/man/8/zfs
+[man exportfs]: https://linux.die.net/man/8/exportfs
+[man exports]: https://linux.die.net/man/5/exports
+[helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
+[gentics]: https://www.gentics.com/genticscms/index.en.html
+[gentics repo]: https://github.com/gentics/kubernetes-zfs-provisioner
+[gentics discussion]: https://github.com/gentics/kubernetes-zfs-provisioner/issues/11
