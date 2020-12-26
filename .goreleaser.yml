@@ -10,6 +10,7 @@ builds:
   - CGO_ENABLED=0 # this is needed otherwise the Docker image build is faulty
   goarch:
   - amd64
+  - arm64
   goos:
   - linux
 
