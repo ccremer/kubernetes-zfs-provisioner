@@ -25,10 +25,10 @@ snapshot:
 
 dockers:
 - image_templates:
-  - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
-  - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
-  - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}"
-  - "quay.io/ccremer/zfs-provisioner:v{{ .Major }}"
+  - "docker.io/michaelwoods/zfs-provisioner:v{{ .Version }}"
+  - "docker.io/michaelwoods/zfs-provisioner:v{{ .Major }}"
+#  - "quay.io/michaelwoods/zfs-provisioner:v{{ .Version }}"
+#  - "quay.io/michaelwoods/zfs-provisioner:v{{ .Major }}"
   extra_files:
   - docker/zfs.sh
   - docker/update-permissions.sh
@@ -45,5 +45,5 @@ changelog:
 
 release:
   github:
-    owner: ccremer
+    owner: michaelwoods
     name: kubernetes-zfs-provisioner
