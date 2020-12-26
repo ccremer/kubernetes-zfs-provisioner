@@ -26,14 +26,34 @@ snapshot:
 
 dockers:
 - image_templates:
-  - "docker.io/michaelwoods/zfs-provisioner:v{{ .Version }}"
-  - "docker.io/michaelwoods/zfs-provisioner:v{{ .Major }}"
-#  - "quay.io/michaelwoods/zfs-provisioner:v{{ .Version }}"
-#  - "quay.io/michaelwoods/zfs-provisioner:v{{ .Major }}"
+  - "michaelwoods/zfs-provisioner:v{{ .Version }}"
+  - "michaelwoods/zfs-provisioner:v{{ .Major }}"
   extra_files:
   - docker/zfs.sh
   - docker/update-permissions.sh
   dockerfile: docker/Dockerfile
+  build_flag_templates:
+  - "--build-arg"
+  - "ARCH=amd64"
+- image_templates:
+  - "michaelwoods/zfs-provisioner:v{{ .Version }}"
+  - "michaelwoods/zfs-provisioner:v{{ .Major }}"
+  extra_files:
+  - docker/zfs.sh
+  - docker/update-permissions.sh
+  goarch: arm64
+  dockerfile: docker/Dockerfile
+  build_flag_templates:
+  - "--build-arg"
+  - "ARCH=arm64v8"
+
+docker_manifests:
+- name_template: michaelwoods/zfs-provisioner:v{{ .Version }}
+  image_templates:
+  - "michaelwoods/zfs-provisioner:v{{ .Version }}-amd64"
+  - "michaelwoods/zfs-provisioner:v{{ .Version }}-arm64v8"
+  - "michaelwoods/zfs-provisioner:v{{ .Major }}-amd64"
+  - "michaelwoods/zfs-provisioner:v{{ .Major }}-arm64v8"
 
 changelog:
   sort: asc

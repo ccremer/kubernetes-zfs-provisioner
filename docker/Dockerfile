@@ -1,4 +1,5 @@
-FROM docker.io/library/alpine:3.11 as runtime
+ARG ARCH
+FROM ${ARCH}/alpine:3.11
 
 ENTRYPOINT ["kubernetes-zfs-provisioner"]
 
