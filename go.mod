@@ -1,4 +1,4 @@
-module github.com/ccremer/kubernetes-zfs-provisioner
+module github.com/michaelwoods/kubernetes-zfs-provisioner
 
 go 1.14
 
