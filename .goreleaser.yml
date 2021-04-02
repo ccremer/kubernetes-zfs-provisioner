@@ -1,13 +1,9 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
-before:
-  hooks:
-  - go vet ./...
-  - go fmt ./...
 
 builds:
 - env:
-  - CGO_ENABLED=0 # this is needed otherwise the Docker image build is faulty
+  - CGO_ENABLED=0 # this is needed to build the single binary
   goarch:
   - amd64
   goos:
@@ -26,24 +22,23 @@ snapshot:
 dockers:
 - image_templates:
   - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
-  - "docker.io/ccremer/zfs-provisioner:v{{ .Major }}"
   - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}"
-  - "quay.io/ccremer/zfs-provisioner:v{{ .Major }}"
+
+  # For prereleases, updating `latest` and the floating tags of the major version does not make sense.
+  # Only the image for the exact version should be pushed.
+  - "{{ if not .Prerelease }}docker.io/ccremer/zfs-provisioner:v{{ .Major }}{{ end }}"
+  - "{{ if not .Prerelease }}quay.io/ccremer/zfs-provisioner:v{{ .Major }}{{ end }}"
+
+  - "{{ if not .Prerelease }}docker.io/ccremer/zfs-provisioner:latest{{ end }}"
+  - "{{ if not .Prerelease }}quay.io/ccremer/zfs-provisioner:latest{{ end }}"
+
   extra_files:
   - docker/zfs.sh
   - docker/update-permissions.sh
   dockerfile: docker/Dockerfile
 
-changelog:
-  sort: asc
-  filters:
-    exclude:
-    - '^Docs:'
-    - '^Test:'
-    - '^Refactor:'
-    - '^Merge pull request'
-
 release:
+  prerelease: auto
   github:
     owner: ccremer
     name: kubernetes-zfs-provisioner
