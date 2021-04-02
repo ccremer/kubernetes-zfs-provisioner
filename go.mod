@@ -3,7 +3,7 @@ module github.com/ccremer/kubernetes-zfs-provisioner
 go 1.14
 
 require (
-	github.com/knadh/koanf v0.12.0
+	github.com/knadh/koanf v0.15.0
 	github.com/miekg/dns v1.1.31 // indirect
 	github.com/mistifyio/go-zfs v2.1.1+incompatible
 	github.com/prometheus/client_golang v1.7.1 // indirect
