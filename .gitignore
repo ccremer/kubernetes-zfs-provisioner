@@ -25,3 +25,4 @@ c.out
 dist
 kubernetes-zfs-provisioner
 .zpool
+.github/release-notes.md

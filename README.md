@@ -16,8 +16,6 @@ but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] con
 
 Currently all ZFS attributes are inherited from the parent dataset.
 
-This provisioner is considered highly **experimental** with an **unstable API**.
-
 For more information about external storage in kubernetes, see
 [kubernetes-sigs/sig-storage-lib-external-provisioner][lib provisioner].
 
