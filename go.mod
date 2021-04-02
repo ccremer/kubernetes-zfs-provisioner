@@ -7,7 +7,7 @@ require (
 	github.com/miekg/dns v1.1.31 // indirect
 	github.com/mistifyio/go-zfs v2.1.1+incompatible
 	github.com/prometheus/client_golang v1.7.1 // indirect
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.0
 	k8s.io/api v0.18.0
 	k8s.io/apimachinery v0.18.0
 	k8s.io/client-go v0.18.0
