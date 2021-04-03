@@ -3,11 +3,12 @@ package zfs
 import (
 	"errors"
 	"fmt"
-	gozfs "github.com/mistifyio/go-zfs"
-	"k8s.io/klog"
 	"os"
 	"os/exec"
 	"sync"
+
+	gozfs "github.com/mistifyio/go-zfs"
+	"k8s.io/klog/v2"
 )
 
 type (
@@ -65,7 +66,7 @@ func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[str
 	if err := setEnvironmentVars(hostname); err != nil {
 		return nil, err
 	}
-	klog.V(3).Infof("creating dataset %s on %s", name, hostname)
+	klog.V(3).InfoS("creating dataset", "name", name, "host", hostname)
 	dataset, err := gozfs.CreateFilesystem(name, properties)
 	if err != nil {
 		return nil, err

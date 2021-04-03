@@ -3,9 +3,11 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
-	"k8s.io/klog"
 	"strconv"
+
+	"k8s.io/klog/v2"
+
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +52,7 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 	if err := p.zfs.SetPermissions(dataset); err != nil {
 		return nil, controller.ProvisioningFinished, err
 	}
-	klog.Infof("dataset \"%s\": created", dataset.Name)
+	klog.InfoS("dataset created", "dataset", dataset.Name)
 
 	// Copy the annotations from the claim and overwrite with ours
 	if options.PVC.Annotations == nil {

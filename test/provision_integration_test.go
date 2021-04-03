@@ -1,23 +1,27 @@
+// +build integration
+
 package test
 
 import (
 	"bufio"
 	"context"
 	"flag"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
+	"math/rand"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"math/rand"
-	"os"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
-	"strconv"
-	"strings"
-	"testing"
+
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 )
 
 var (
@@ -31,14 +35,10 @@ type ProvisionTestSuit struct {
 }
 
 func TestProvisionSuite(t *testing.T) {
-	if integrationTest {
-		s := ProvisionTestSuit{
-			dataset: "pv-test-" + strconv.Itoa(rand.Int()),
-		}
-		suite.Run(t, &s)
-	} else {
-		t.Skipf("Not running provision integration test as integration flag was not provided")
+	s := ProvisionTestSuit{
+		dataset: "pv-test-" + strconv.Itoa(rand.Int()),
 	}
+	suite.Run(t, &s)
 }
 
 func (suite *ProvisionTestSuit) SetupSuite() {
