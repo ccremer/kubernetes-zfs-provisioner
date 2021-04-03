@@ -30,4 +30,4 @@ jobs:
       - name: Run unit tests
         run: make test
       - name: Run integration tests
-        run: make install_zfs integration_test
+        run: make install:zfs test:integration
