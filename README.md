@@ -1,8 +1,8 @@
 # Dynamic ZFS provisioner for Kubernetes
 
-[![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Build)][build]
+[![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Test)][build]
 ![Go version](https://img.shields.io/github/go-mod/go-version/ccremer/kubernetes-zfs-provisioner)
-![Kubernetes version](https://img.shields.io/badge/k8s-v1.18-blue)
+![Kubernetes version](https://img.shields.io/badge/k8s-v1.19-blue)
 [![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
 [![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
 [![Docker image](https://img.shields.io/docker/pulls/ccremer/zfs-provisioner)][dockerhub]
@@ -11,8 +11,12 @@
 kubernetes-zfs-provisioner is a dynamic ZFS persistent volume provisioner for Kubernetes.
 It creates ZFS datasets via SSH on remote hosts and shares them via [NFS][nfs] to make them mountable to pods.
 
+![architecture with NFS](architecture.nfs.drawio.svg "Architecture with NFS provisioning")
+
 Alternatively, if the ZFS hosts are part of the cluster, [HostPath][hostpath] is also possible,
 but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] configured.
+
+![architecture with Hostpath](architecture.hostpath.drawio.svg "Architecture with Hostpath provisioning")
 
 Currently all ZFS attributes are inherited from the parent dataset.
 
@@ -135,29 +139,12 @@ This eliminates network latency over unencrypted NFS, but schedules the pods to 
 ### Requirements
 
 * go
-* goreleaser
 * docker
-* ZFS and NFS (run `make install_zfs` on Debian/Ubuntu if not already installed)
+* ZFS and NFS (run `make install:zfs` on Debian/Ubuntu if not already installed)
 
-### Building
+### Building and Testing
 
-`make` with Goreleaser
-
-* downloads the dependencies
-* runs unit tests
-* compiles the binary
-* builds the docker image
-
-### Testing
-
-`make prepare`
-
-* Creates a new zpool with a dummy file for testing
-* Creates a new ZFS dataset for testing
-
-`make integration_test`
-
-* Runs the integration test suites against a locally set up zpool
+Run `make help` to see which target does what.
 
 ## Troubleshooting
 
@@ -171,12 +158,14 @@ pvc-56ea786a-e376-4911-a4b1-7b040dc3537f" => cannot share 'tank/kubernetes/
 pvc-56ea786a-e376-4911-a4b1-7b040dc3537f': share(1M) failed
 filesystem successfully created, but not shared
 ```
+
 This happens when the dataset got created, but invoking `zfs share` is failing.
-Most likely because from [zfs(8)][man zfs] it's stated that [exportfs(8)][man exportfs] is invoked,
-which talks to the NFS server. So, have you got `nfs-kernel-server` installed on the host and is
-`exportfs` available?
+Most likely because from [zfs(8)][man zfs] it's stated that [exportfs(8)][man exportfs] is invoked, which talks to the NFS server.
+
+So, have you got `nfs-kernel-server` installed on the host and is `exportfs` available?
 
 Once you solve this, destroy the dataset again, as the following retries will fail forever:
+
 ```
 cannot create 'tank/services/kubernetes/pvc-56ea786a-e376-4911-a4b1-7b040dc3537f': dataset already exists
 ```
@@ -185,10 +174,10 @@ cannot create 'tank/services/kubernetes/pvc-56ea786a-e376-4911-a4b1-7b040dc3537f
 
 Thanks to [Gentics][gentics] for open sourcing the [initial version][gentics repo]!
 
-I have been [allowed to take over maintenance for this repository][gentics discussion].
+I (@ccremer) have been allowed to take over maintenance for this repository.
 
 
-[build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ABuild
+[build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ATest
 [releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
 [license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
 [dockerhub]: https://hub.docker.com/r/ccremer/zfs-provisioner
@@ -202,4 +191,3 @@ I have been [allowed to take over maintenance for this repository][gentics discu
 [helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
 [gentics]: https://www.gentics.com/genticscms/index.en.html
 [gentics repo]: https://github.com/gentics/kubernetes-zfs-provisioner
-[gentics discussion]: https://github.com/gentics/kubernetes-zfs-provisioner/issues/11
