@@ -1,20 +1,23 @@
-.PHONY: build dist install_zfs prepare install clean uninstall test integration_test
 SHELL := /usr/bin/env bash
 
-ZPOOL_SIZE=1 # in GB
-zpool_dir := .zpool
-zpool_disk := $(zpool_dir)/zpool.img
-zpool_name_file := $(zpool_dir)/zpool.nfo
-zpool_name := $(shell bash -c "cat .zpool/zpool.nfo || echo test$$RANDOM")
-zfs_dataset := $(zpool_name)/zfs-provisioner
+# Disable built-in rules
+MAKEFLAGS += --no-builtin-rules
+MAKEFLAGS += --no-builtin-variables
+.SUFFIXES:
+.SECONDARY:
 
-build: test
+include Makefile.vars.mk
+
+.PHONY: help
+help: ## Show this help
+	@grep -E -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = "(: ).*?## "}; {gsub(/\\:/,":",$$1)}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: build
+build: ## Builds the binary
 	go build ./...
 
-dist:
-	goreleaser release --snapshot --rm-dist --skip-sign
-
-install_zfs:
+.PHONY: install\:zfs
+install\:zfs: ## Installs zfs-on-linux and nfs-kernel-server (requires sudo)
 	sudo apt update
 	sudo apt install -y zfsutils-linux nfs-kernel-server
 
@@ -32,20 +35,22 @@ $(zpool_name_file): $(zpool_dir)
 	sudo zfs create $(zfs_dataset)
 	sudo zfs allow -e create,destroy,snapshot,refreservation,refquota,share,sharenfs $(zfs_dataset)
 
-prepare: /$(zfs_dataset)
+.PHONY: prepare
+prepare: /$(zfs_dataset) ## Prepares the zfs zpool for integration test
 
-install: dist
-	sudo dpkg -i dist/kubernetes-zfs-provisioner_linux_amd64.deb
-
-clean:
+.PHONY: clean\:zfs
+clean\:zfs: ## Cleans the zfs pool (requires sudo)
 	sudo zpool destroy $(zpool_name)
-	rm -r -v $(zpool_dir)
+	rm -rfv $(zpool_dir)
 
-uninstall:
-	sudo apt remove -y -m kubernetes-zfs-provisioner
+.PHONY: clean
+clean: clean\:zfs ## Cleans everything
+	rm -rf c.out $(binary) dist
 
-test:
+.PHONY: test
+test: ## Runs the unit tests
 	go test -coverprofile c.out ./...
 
-integration_test: prepare
+.PHONY: test\:integration
+test\:integration: prepare ## Runs the integration tests with zfs (requires sudo)
 	sudo sh -c "go env -w GOPATH=$$(go env GOPATH) && go test -v ./test/... -integration -parentDataset $(zfs_dataset)"
