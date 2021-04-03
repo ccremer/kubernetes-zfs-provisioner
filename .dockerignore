@@ -1,0 +1,4 @@
+.*
+*
+!kubernetes-zfs-provisioner
+!docker/*

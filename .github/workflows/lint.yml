@@ -1,17 +1,13 @@
-name: Test
+name: Lint
 
 on:
+  pull_request: {}
   push:
-    branches:
-      - master
-    tags-ignore:
-      - "*"
-  pull_request:
     branches:
       - master
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -26,7 +22,5 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - name: Run unit tests
-        run: make test
-      - name: Run integration tests
-        run: make install:zfs test:integration
+      - name: Run linters
+        run: make lint

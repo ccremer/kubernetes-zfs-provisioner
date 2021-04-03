@@ -14,7 +14,11 @@ help: ## Show this help
 
 .PHONY: build
 build: ## Builds the binary
-	go build ./...
+	go build -o $(binary) main.go
+
+.PHONY: build\:docker
+build\:docker: build ## Builds the docker image
+	docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f docker/Dockerfile .
 
 .PHONY: install\:zfs
 install\:zfs: ## Installs zfs-on-linux and nfs-kernel-server (requires sudo)
@@ -54,3 +58,16 @@ test: ## Runs the unit tests
 .PHONY: test\:integration
 test\:integration: prepare ## Runs the integration tests with zfs (requires sudo)
 	sudo sh -c "go env -w GOPATH=$$(go env GOPATH) && go test -v ./test/... -integration -parentDataset $(zfs_dataset)"
+
+.PHONY: fmt
+fmt: ## Run go fmt against code
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code
+	go vet ./...
+
+.PHONY: lint
+lint: fmt vet ## Invokes the fmt, vet and checks for uncommitted changes
+	@echo 'Check for uncommitted changes ...'
+	git diff --exit-code
