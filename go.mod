@@ -12,5 +12,6 @@ require (
 	k8s.io/apimachinery v0.19.1
 	k8s.io/client-go v0.19.1
 	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.8.0 // indirect
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v6 v6.3.0
 )
