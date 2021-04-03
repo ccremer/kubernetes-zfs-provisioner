@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: example-retain
+  name: example-delete
   namespace: zfs-system
 spec:
   storageClassName: zfs-delete

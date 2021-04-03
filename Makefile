@@ -13,6 +13,7 @@ help: ## Show this help
 	@grep -E -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = "(: ).*?## "}; {gsub(/\\:/,":",$$1)}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build
+build: export CGO_ENABLED = 0
 build: ## Builds the binary
 	go build -o $(binary) main.go
 
