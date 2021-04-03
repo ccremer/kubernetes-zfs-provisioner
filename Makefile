@@ -54,3 +54,16 @@ test: ## Runs the unit tests
 .PHONY: test\:integration
 test\:integration: prepare ## Runs the integration tests with zfs (requires sudo)
 	sudo sh -c "go env -w GOPATH=$$(go env GOPATH) && go test -v ./test/... -integration -parentDataset $(zfs_dataset)"
+
+.PHONY: fmt
+fmt: ## Run go fmt against code
+	go fmt ./...
+
+.PHONY: vet
+vet: ## Run go vet against code
+	go vet ./...
+
+.PHONY: lint
+lint: fmt vet ## Invokes the fmt, vet and checks for uncommitted changes
+	@echo 'Check for uncommitted changes ...'
+	git diff --exit-code
