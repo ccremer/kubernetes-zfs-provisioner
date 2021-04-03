@@ -3,9 +3,11 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
+
 	core "k8s.io/api/core/v1"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
+
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 )
 
 // Delete removes a given volume from the server
@@ -24,6 +26,6 @@ func (p *ZFSProvisioner) Delete(ctx context.Context, volume *core.PersistentVolu
 		return fmt.Errorf("error destroying dataset: %w", err)
 	}
 
-	klog.Infof("dataset \"%s\": destroyed", datasetPath)
+	klog.InfoS("dataset destroyed", "dataset", datasetPath)
 	return nil
 }

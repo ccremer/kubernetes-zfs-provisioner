@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/env"
-	"k8s.io/klog"
+	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
+	"k8s.io/klog/v2"
+
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 
 	"github.com/knadh/koanf"
 	"k8s.io/client-go/kubernetes"
@@ -49,7 +52,7 @@ func main() {
 	}
 
 	instance := koanfInstance.String(provisionerInstanceKey)
-	klog.Infof("Connected to cluster \"%s\" version \"%s.%s\"", config.Host, serverVersion.Major, serverVersion.Minor)
+	klog.InfoS("Connected to cluster", "host", config.Host, "version", fmt.Sprintf("%s.%s", serverVersion.Major, serverVersion.Minor))
 	p, err := provisioner.NewZFSProvisioner(instance)
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
@@ -68,7 +71,7 @@ func main() {
 		controller.MetricsPort(int32(koanfInstance.Int(metricsPortKey))),
 	)
 
-	klog.Infof("Starting provisioner version \"%s\" commit \"%s\"", version, commit)
+	klog.InfoS("Starting provisioner", "version", version, "commit", commit)
 	pc.Run(context.Background())
 }
 

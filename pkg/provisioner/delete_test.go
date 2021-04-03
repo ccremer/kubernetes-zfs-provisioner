@@ -2,13 +2,15 @@ package provisioner
 
 import (
 	"context"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
+	"testing"
+
 	gozfs "github.com/mistifyio/go-zfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
+
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 )
 
 func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testing.T) {
