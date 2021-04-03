@@ -14,7 +14,11 @@ help: ## Show this help
 
 .PHONY: build
 build: ## Builds the binary
-	go build ./...
+	go build -o $(binary) main.go
+
+.PHONY: build\:docker
+build\:docker: build ## Builds the docker image
+	docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f docker/Dockerfile .
 
 .PHONY: install\:zfs
 install\:zfs: ## Installs zfs-on-linux and nfs-kernel-server (requires sudo)
