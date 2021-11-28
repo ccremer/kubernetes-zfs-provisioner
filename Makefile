@@ -58,7 +58,7 @@ test: ## Runs the unit tests
 
 .PHONY: test\:integration
 test\:integration: prepare ## Runs the integration tests with zfs (requires sudo)
-	sudo sh -c "go env -w GOPATH=$$(go env GOPATH) && go test -tags=integration -v ./test/... -parentDataset $(zfs_dataset)"
+	sudo sh -c "export PATH=$$PATH:$$(go env GOROOT)/bin && go test -tags=integration -v ./test/... -parentDataset $(zfs_dataset)"
 
 .PHONY: fmt
 fmt: ## Run go fmt against code
