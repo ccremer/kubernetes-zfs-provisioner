@@ -28,7 +28,7 @@ snapshot:
 
 dockers:
   - image_templates:
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
       - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
 
     extra_files:
@@ -41,7 +41,7 @@ dockers:
       - "--platform=linux/amd64"
 
   - image_templates:
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
       - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
 
     extra_files:
@@ -74,20 +74,20 @@ docker_manifests:
       - "quay.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
 
   # Docker.io
-  - name_template: "{{ if not .Prerelease }}docker.io/ccremer/zfs-provisioner:latest{{ end }}"
+  - name_template: "{{ if not .Prerelease }}ghcr.io/ccremer/zfs-provisioner:latest{{ end }}"
     image_templates:
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
 
-  - name_template: "{{ if not .Prerelease }}docker.io/ccremer/zfs-provisioner:v{{ .Major }}{{ end }}"
+  - name_template: "{{ if not .Prerelease }}ghcr.io/ccremer/zfs-provisioner:v{{ .Major }}{{ end }}"
     image_templates:
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
 
-  - name_template: "docker.io/ccremer/zfs-provisioner:v{{ .Version }}"
+  - name_template: "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}"
     image_templates:
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
-      - "docker.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-amd64"
+      - "ghcr.io/ccremer/zfs-provisioner:v{{ .Version }}-arm64"
 
 release:
   prerelease: auto
