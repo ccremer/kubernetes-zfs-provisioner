@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -15,7 +14,7 @@ import (
 	"github.com/knadh/koanf"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 )
 
 const (
@@ -41,18 +40,14 @@ func main() {
 		klog.Fatalf("Couldn't get in-cluster or kubectl config: %v", err)
 	}
 
-	// Retrieve config und server version
+	// Retrieve config
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		klog.Fatalf("Failed to create kubernetes client: %v", err)
 	}
-	serverVersion, err := clientset.DiscoveryClient.ServerVersion()
-	if err != nil {
-		klog.Fatalf("Failed retrieving server version: %v", err)
-	}
 
 	instance := koanfInstance.String(provisionerInstanceKey)
-	klog.InfoS("Connected to cluster", "host", config.Host, "version", fmt.Sprintf("%s.%s", serverVersion.Major, serverVersion.Minor))
+	klog.InfoS("Connected to cluster", "host", config.Host)
 	p, err := provisioner.NewZFSProvisioner(instance)
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
@@ -66,7 +61,6 @@ func main() {
 		clientset,
 		instance,
 		p,
-		serverVersion.GitVersion,
 		controller.MetricsAddress(koanfInstance.String(metricsAddrKey)),
 		controller.MetricsPort(int32(koanfInstance.Int(metricsPortKey))),
 	)
