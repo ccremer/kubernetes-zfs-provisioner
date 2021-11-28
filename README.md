@@ -5,7 +5,6 @@
 ![Kubernetes version](https://img.shields.io/badge/k8s-v1.19-blue)
 [![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
 [![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
-[![Docker image](https://img.shields.io/docker/pulls/ccremer/zfs-provisioner)][dockerhub]
 [![License](https://img.shields.io/github/license/ccremer/kubernetes-zfs-provisioner)][license]
 
 kubernetes-zfs-provisioner is a dynamic ZFS persistent volume provisioner for Kubernetes.
@@ -180,7 +179,6 @@ I (@ccremer) have been allowed to take over maintenance for this repository.
 [build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ATest
 [releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
 [license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
-[dockerhub]: https://hub.docker.com/r/ccremer/zfs-provisioner
 [node affinity]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity
 [lib provisioner]: https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner
 [hostpath]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
