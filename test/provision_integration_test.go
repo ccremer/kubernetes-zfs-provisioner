@@ -18,7 +18,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v6/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
