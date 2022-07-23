@@ -3,7 +3,7 @@ module github.com/ccremer/kubernetes-zfs-provisioner
 go 1.18
 
 require (
-	github.com/knadh/koanf v1.4.1
+	github.com/knadh/koanf v1.4.2
 	github.com/mistifyio/go-zfs v2.1.1+incompatible
 	github.com/stretchr/testify v1.7.2
 	k8s.io/api v0.24.0
