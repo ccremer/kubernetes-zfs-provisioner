@@ -6,9 +6,9 @@ require (
 	github.com/knadh/koanf v1.4.2
 	github.com/mistifyio/go-zfs v2.1.1+incompatible
 	github.com/stretchr/testify v1.8.0
-	k8s.io/api v0.24.0
-	k8s.io/apimachinery v0.24.0
-	k8s.io/client-go v0.24.0
+	k8s.io/api v0.24.3
+	k8s.io/apimachinery v0.24.3
+	k8s.io/client-go v0.24.3
 	k8s.io/klog/v2 v2.70.1
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0
 )
