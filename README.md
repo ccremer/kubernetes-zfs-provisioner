@@ -2,10 +2,8 @@
 
 [![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Test)][build]
 ![Go version](https://img.shields.io/github/go-mod/go-version/ccremer/kubernetes-zfs-provisioner)
-![Kubernetes version](https://img.shields.io/badge/k8s-v1.22-blue)
 [![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
 [![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
-[![License](https://img.shields.io/github/license/ccremer/kubernetes-zfs-provisioner)][license]
 
 kubernetes-zfs-provisioner is a dynamic ZFS persistent volume provisioner for Kubernetes.
 It creates ZFS datasets via SSH on remote hosts and shares them via [NFS][nfs] to make them mountable to pods.
@@ -178,7 +176,6 @@ I (@ccremer) have been allowed to take over maintenance for this repository.
 
 [build]: https://github.com/ccremer/kubernetes-zfs-provisioner/actions?query=workflow%3ATest
 [releases]: https://github.com/ccremer/kubernetes-zfs-provisioner/releases
-[license]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/LICENSE.txt
 [node affinity]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#node-affinity
 [lib provisioner]: https://github.com/kubernetes-sigs/sig-storage-lib-external-provisioner
 [hostpath]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
