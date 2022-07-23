@@ -1,0 +1,19 @@
+{{- if .Values.storageClass.create -}}
+{{- range .Values.storageClass.classes }}
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "kubernetes-zfs-provisioner.labels" $ | nindent 4 }}
+provisioner: {{ $.Values.provisioner.instance }}
+reclaimPolicy: {{ .policy | default "Delete" }}
+parameters:
+  parentDataset: {{ .parentDataset }}
+  hostname: {{ .hostName }}
+  type: {{ .type | default "nfs" }}
+  node: {{ .node | default "''" }}
+  shareProperties: {{ .shareProperties | default "''" }}
+{{- end }}
+{{- end }}

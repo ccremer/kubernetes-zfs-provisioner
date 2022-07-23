@@ -1,0 +1,4 @@
+storageClass:
+  create: true
+  classes:
+    - name: test

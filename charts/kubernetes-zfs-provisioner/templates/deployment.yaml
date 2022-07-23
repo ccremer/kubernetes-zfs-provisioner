@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubernetes-zfs-provisioner.fullname" . }}
+  labels:
+    {{- include "kubernetes-zfs-provisioner.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "kubernetes-zfs-provisioner.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: provisioner
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ZFS_PROVISIONER_INSTANCE
+              value: {{ .Values.provisioner.instance }}
+          {{- with .Values.env }}
+          {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value }}
+          {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: ssh
+              mountPath: {{ .Values.ssh.mountPath }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.hostAliases }}
+      hostAliases:
+      {{- range $ip, $hostnames := . }}
+        - ip: {{ $ip }}
+          hostnames:
+          {{- range . }}
+            - {{ . }}
+          {{- end }}
+      {{- end }}
+      {{- end }}
+      volumes:
+        {{- with .Values.ssh }}
+        - name: ssh
+          secret:
+            secretName: {{ include "kubernetes-zfs-provisioner.secretName" $ }}
+            defaultMode: 0600
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

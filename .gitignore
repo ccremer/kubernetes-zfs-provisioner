@@ -1,11 +1,5 @@
-# Binaries for programs and plugins
-*.exe
-*.dll
-*.so
-*.dylib
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# Output of the go coverage tool
+/*.out
 
 vendor
 *.img
@@ -15,14 +9,8 @@ bin
 .env
 kube.conf
 
-#Vim tmp files
-*~
-
-#Idea IDE files
-.idea
-
-c.out
-dist
-kubernetes-zfs-provisioner
-.zpool
-.github/release-notes.md
+/dist
+/kubernetes-zfs-provisioner
+/.zpool
+/.work
+/.github/release-notes.md

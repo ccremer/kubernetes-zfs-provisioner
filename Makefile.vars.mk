@@ -1,3 +1,5 @@
+PROJECT_DIR ?= $(shell pwd)
+WORK_DIR = $(PROJECT_DIR)/.work
 
 ZPOOL_SIZE=1 # in GB
 zpool_dir := .zpool
