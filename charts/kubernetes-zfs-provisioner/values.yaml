@@ -1,0 +1,120 @@
+# Default values for kubernetes-zfs-provisioner.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Usually `1` is fine
+replicaCount: 1
+
+image:
+  # -- Location of the container image
+  repository: ccremer/zfs-provisioner
+  # -- Container image registry
+  registry: ghcr.io
+  # -- Container image tag
+  tag: v1
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+provisioner:
+  # -- Provisoner instance name if multiple are running (multiple
+  # instances are not required for managing multiple ZFS hosts)
+  instance: pv.kubernetes.io/zfs
+
+storageClass:
+  # -- Whether to create storage classes for this provisioner.
+  create: false
+  # -- Storage classes to create. See [values.yaml](values.yaml) for an example.
+  classes: []
+    # - name: zfs
+    #   # -- The provisioners connects through SSH to this ZFS host
+    #   hostName: storage-1.domain.tld
+    #   # -- Existing dataset on the target ZFS host
+    #   parentDataset: tank/kubernetes
+    #   # -- The reclaim policy supported by the provisioner
+    #   policy: "Delete"
+    #   # -- NFS export properties (see `exports(5)`)
+    #   shareProperties: ""
+    #   # -- Provision type, one of [`nfs`, `hostpath`]
+    #   type: "nfs"
+    #   # -- Override `kubernetes.io/hostname` from `hostName` parameter for
+    #   # `HostPath` node affinity
+    #   node: ""
+
+ssh:
+  # -- If SSH secrets are managed externally, specify the name
+  externalSecretName: ""
+  # -- The path where the SSH config and identities are mounted
+  mountPath: "/home/zfs/.ssh"
+  # -- **Required.** ssh_config(5)-compatible file content to configure SSH options when connecting
+  config: ""
+    # config: |
+    #   Host my-host
+    #     IdentityFile ~/.ssh/id_ed25519
+    #     User zfs
+
+  # -- **Required.** Provide a private key for each SSH identity.
+  # See [values.yaml](./values.yaml) for an example
+  identities: {}
+#   id_ed25519: |
+#     -----BEGIN OPENSSH PRIVATE KEY-----
+#     ...
+#     -----END OPENSSH PRIVATE KEY-----
+
+  # -- **Required.** List of {host, pubKey} dicts where the public key of each host is configured
+  knownHosts: []
+#   - host: my-host
+#     pubKey: ssh-ed25519 AAAAC3NzaC...
+
+# -- A dict with KEY: VALUE pairs
+env: {}
+
+# -- A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts.
+# See [values.yaml](./values.yaml) for an example.
+hostAliases: {}
+#  192.168.1.1:
+#    - my-custom-host.name
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+rbac:
+  # -- **Required for first time deployments** Grant the service account
+  # the necessary permissions,
+  create: false
+
+# -- If you encounter **issues with SSH, set `podSecurityContext.fsGroup=100`**, as the SSH
+# files might not be readable to the container user `zfs` with uid 100.
+podSecurityContext: {}
+  # fsGroup: 100
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 100
+
+resources:
+  limits:
+    memory: 40Mi
+  requests:
+    cpu: 50m
+    memory: 20Mi
+
+# -- Reminder: This has no effect on any PVs, but maybe you want the provisioner pod running
+# on certain nodes.
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
