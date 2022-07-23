@@ -1,22 +1,18 @@
-name: Build
+name: ChartTest
 
 on:
   pull_request:
-    branches:
-      - master
+    # only run when there are chart changes
+    paths:
+      - 'charts/**'
 
 jobs:
-  docker:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - name: Determine Go version from go.mod
-        run: echo "GO_VERSION=$(go mod edit -json | jq -r .Go)" >> $GITHUB_ENV
-
       - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
 
       - uses: actions/cache@v3
         with:
@@ -25,5 +21,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Build
-        run: make build:docker
+      - name: Run chart tests
+        run: make chart-test

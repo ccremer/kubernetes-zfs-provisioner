@@ -7,6 +7,7 @@ MAKEFLAGS += --no-builtin-variables
 .SECONDARY:
 
 include Makefile.vars.mk
+-include charts/charts.mk
 
 .PHONY: help
 help: ## Show this help
