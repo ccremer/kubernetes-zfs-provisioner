@@ -49,7 +49,7 @@ dockers:
       - docker/update-permissions.sh
     goarch: arm64
     dockerfile: docker/Dockerfile
-    use_buildx: true
+    use: buildx
     build_flag_templates:
       - "--platform=linux/arm64/v8"
 
