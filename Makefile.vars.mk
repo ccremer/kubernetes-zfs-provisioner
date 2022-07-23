@@ -10,6 +10,6 @@ zfs_dataset := $(zpool_name)/zfs-provisioner
 
 binary ?= kubernetes-zfs-provisioner
 
-IMAGE_REGISTRY ?= quay.io
+IMAGE_REGISTRY ?= ghcr.io
 IMAGE_REPOSITORY ?= $(IMAGE_REGISTRY)/ccremer/zfs-provisioner
 IMAGE_TAG ?= latest
