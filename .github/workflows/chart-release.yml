@@ -3,11 +3,9 @@ name: ChartRelease
 on:
   push:
     tags:
-      - "[a-z0-9]+-*" # match tags following the 'chart-name-x.y.z'
+      - "chart/[a-z0-9]+-*" # match tags following the 'chart/$chartname-x.y.z'
 
 jobs:
-  # Currently this job with changelog generator only works for the k8up chart...
-  # More charts (e.g. forks) may need additional engineering to get the changelog right.
   gh-pages:
     runs-on: ubuntu-latest
     steps:
@@ -33,17 +31,20 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
       - name: Configure Git
         run: |
           git config user.name "$GITHUB_ACTOR"
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
       - name: Get chart name
         run: echo "CHART_NAME=$(echo ${GITHUB_REF##*/} | grep --perl-regexp --only-matching '^([a-zA-Z0-9-]+)(?![0-9.]+)')" >> $GITHUB_ENV
 
       - name: Get chart versions
         run: |
           echo "CHART_VERSION=$(yq e '.version' charts/${CHART_NAME}/Chart.yaml)" >> $GITHUB_ENV
-          echo "PREVIOUS_CHART_VERSION=$(git tag --sort=taggerdate --list "k8up-*" | tail -n 2 | head -n 1 | rev | cut -d - -f 1 | rev)" >> $GITHUB_ENV
+          echo "PREVIOUS_CHART_VERSION=$(git tag --sort=taggerdate --list "chart/${CHART_NAME}-*" | tail -n 2 | head -n 1 | rev | cut -d - -f 1 | rev)" >> $GITHUB_ENV
+
       - name: Prepare changelog config
         run: .github/changelog-charts.sh ${CHART_NAME}
 
@@ -68,14 +69,13 @@ jobs:
           configuration: ".github/configuration.json"
           ignorePreReleases: true
           outputFile: .github/release-notes.md
-          fromTag: ${{ env.CHART_NAME }}-${{ env.PREVIOUS_CHART_VERSION }}
+          fromTag: chart/${{ env.CHART_NAME }}-${{ env.PREVIOUS_CHART_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # there doesn't seem to be any maintained GitHub actions that allow uploading assets after release has been made.
       - name: Update release
         run: |
-          gh release upload ${CHART_NAME}-${CHART_VERSION} k8up-crd.yaml
-          gh release edit   ${CHART_NAME}-${CHART_VERSION} --notes-file .github/release-notes.md
+          gh release edit ${CHART_NAME}-${CHART_VERSION} --notes-file .github/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
