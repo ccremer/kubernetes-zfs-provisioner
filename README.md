@@ -22,7 +22,13 @@ For more information about external storage in kubernetes, see
 
 ## Installation
 
-Recommended option is the [Helm Chart][helm chart].
+Recommended option is via Helm:
+
+```bash
+helm repo add kubernetes-zfs-provisioner https://ccremer.github.io/kubernetes-zfs-provisioner/
+helm repo update
+helm install kubernetes-zfs-provisioner zfs-provisioner/kubernetes-zfs-provisioner
+```
 
 ## Configuration
 
