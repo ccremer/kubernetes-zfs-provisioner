@@ -1,30 +1,99 @@
 {{- if .Values.rbac.create -}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: ClusterRole
 metadata:
-  name: {{ include "kubernetes-zfs-provisioner.fullname" . }}-binding
+  name: '{{ include "kubernetes-zfs-provisioner.fullname" . }}-controller'
   labels:
     {{- include "kubernetes-zfs-provisioner.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:persistent-volume-provisioner
-subjects:
-- kind: ServiceAccount
-  name: {{ include "kubernetes-zfs-provisioner.serviceAccountName" . }}
-  namespace: {{ .Release.Namespace }}
+rules:
+# leader election
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - list
+      - update
+
+# system:controller:endpoint-controller
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+      - services
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ''
+    resources:
+      - endpoints
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - update
+  - apiGroups:
+      - ''
+    resources:
+      - endpoints/restricted
+    verbs:
+      - create
+  - apiGroups:
+      - ''
+      - events.k8s.io
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+      - update
+      - watch
+
+# system:persistent-volume-provisioner (deduplicated)
+  - apiGroups:
+      - ''
+    resources:
+      - persistentvolumes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ''
+    resources:
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - get
+      - list
+      - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "kubernetes-zfs-provisioner.fullname" . }}-leaderelection
+  name: {{ include "kubernetes-zfs-provisioner.fullname" . }}
   labels:
     {{- include "kubernetes-zfs-provisioner.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:controller:endpoint-controller
+  name: '{{ include "kubernetes-zfs-provisioner.fullname" . }}-controller'
 subjects:
 - kind: ServiceAccount
   name: {{ include "kubernetes-zfs-provisioner.serviceAccountName" . }}
