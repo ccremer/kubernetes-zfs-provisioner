@@ -10,7 +10,7 @@ require (
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
 	k8s.io/klog/v2 v2.70.1
-	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.0
+	sigs.k8s.io/sig-storage-lib-external-provisioner/v8 v8.0.1-0.20220531195724-a4ce2c1d2e52 // https://github.com/ccremer/kubernetes-zfs-provisioner/issues/70
 )
 
 require (
