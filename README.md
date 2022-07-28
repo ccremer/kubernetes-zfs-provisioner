@@ -22,12 +22,7 @@ For more information about external storage in kubernetes, see
 
 ## Installation
 
-Recommended option is via Helm:
-
-```bash
-helm repo add kubernetes-zfs-provisioner https://ccremer.github.io/kubernetes-zfs-provisioner/
-helm repo update
-helm install kubernetes-zfs-provisioner zfs-provisioner/kubernetes-zfs-provisioner
+Recommended option is via [Helm][helm chart]
 ```
 
 ## Configuration
@@ -189,6 +184,6 @@ I (@ccremer) have been allowed to take over maintenance for this repository.
 [man zfs]: https://linux.die.net/man/8/zfs
 [man exportfs]: https://linux.die.net/man/8/exportfs
 [man exports]: https://linux.die.net/man/5/exports
-[helm chart]: https://ccremer.github.io/charts/kubernetes-zfs-provisioner/
+[helm chart]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/charts/kubernetes-zfs-provisioner/README.md
 [gentics]: https://www.gentics.com/genticscms/index.en.html
 [gentics repo]: https://github.com/gentics/kubernetes-zfs-provisioner
