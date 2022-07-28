@@ -23,7 +23,6 @@ For more information about external storage in kubernetes, see
 ## Installation
 
 Recommended option is via [Helm][helm chart]
-```
 
 ## Configuration
 
