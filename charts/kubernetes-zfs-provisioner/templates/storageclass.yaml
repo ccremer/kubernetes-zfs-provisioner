@@ -7,6 +7,10 @@ metadata:
   name: {{ .name }}
   labels:
     {{- include "kubernetes-zfs-provisioner.labels" $ | nindent 4 }}
+{{- with .annotations }}
+  annotations:
+    {{ toYaml . | nindent 4 }}
+{{- end }}
 provisioner: {{ $.Values.provisioner.instance }}
 reclaimPolicy: {{ .policy | default "Delete" }}
 parameters:

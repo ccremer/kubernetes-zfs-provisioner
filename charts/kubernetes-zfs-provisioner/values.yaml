@@ -42,6 +42,9 @@ storageClass:
     #   # -- Override `kubernetes.io/hostname` from `hostName` parameter for
     #   # `HostPath` node affinity
     #   node: ""
+    #   # -- Annotations for the storage class
+    #   # annotations:
+    #   #   storageclass.kubernetes.io/is-default-class: "true"
 
 ssh:
   # -- If SSH secrets are managed externally, specify the name
