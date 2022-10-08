@@ -1,6 +1,6 @@
 module github.com/ccremer/kubernetes-zfs-provisioner
 
-go 1.18
+go 1.19
 
 require (
 	github.com/knadh/koanf v1.4.3
