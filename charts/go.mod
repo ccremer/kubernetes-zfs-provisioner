@@ -3,7 +3,7 @@ module charts
 go 1.19
 
 require (
-	github.com/gruntwork-io/terratest v0.40.21
+	github.com/gruntwork-io/terratest v0.41.3
 	github.com/norwoodj/helm-docs v1.11.0
 	github.com/stretchr/testify v1.8.0
 	k8s.io/api v0.20.6
