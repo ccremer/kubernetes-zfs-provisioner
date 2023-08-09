@@ -11,6 +11,7 @@ const (
 	HostnameParameter        = "hostname"
 	TypeParameter            = "type"
 	NodeNameParameter        = "node"
+	ReserveSpaceParameter    = "reserveSpace"
 )
 
 // StorageClass Parameters are expected in the following schema:
@@ -21,6 +22,7 @@ parameters:
   type: nfs|hostpath
   shareProperties: rw=10.0.0.0/8,no_root_squash
   node: my-zfs-host
+  reserveSpace: true|false
 */
 
 type (
@@ -30,9 +32,10 @@ type (
 		// ParentDataset of the zpool. Needs to be existing on the target ZFS host.
 		ParentDataset string
 		// Hostname of the target ZFS host. Will be used to connect over SSH.
-		Hostname string
-		NFS      *NFSParameters
-		HostPath *HostPathParameters
+		Hostname     string
+		NFS          *NFSParameters
+		HostPath     *HostPathParameters
+		ReserveSpace bool
 	}
 	NFSParameters struct {
 		// ShareProperties specifies additional properties to pass to 'zfs create sharenfs=%s'.
@@ -57,9 +60,21 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 	if strings.HasPrefix(parentDataset, "/") || strings.HasSuffix(parentDataset, "/") {
 		return nil, fmt.Errorf("%s must not begin or end with '/': %s", ParentDatasetParameter, parentDataset)
 	}
+
+	reserveSpaceValue, reserveSpaceValuePresent := parameters[ReserveSpaceParameter]
+	var reserveSpace bool
+	if !reserveSpaceValuePresent || strings.EqualFold(reserveSpaceValue, "true") {
+		reserveSpace = true
+	} else if strings.EqualFold(reserveSpaceValue, "false") {
+		reserveSpace = false
+	} else {
+		return nil, fmt.Errorf("invalid '%s' parameter value: %s", ReserveSpaceParameter, parameters[ReserveSpaceParameter])
+	}
+
 	p := &ZFSStorageClassParameters{
 		ParentDataset: parentDataset,
 		Hostname:      parameters[HostnameParameter],
+		ReserveSpace:  reserveSpace,
 	}
 	typeParam := parameters[TypeParameter]
 	switch typeParam {
