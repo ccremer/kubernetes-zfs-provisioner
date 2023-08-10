@@ -54,7 +54,6 @@ func (suite *ProvisionTestSuit) SetupSuite() {
 }
 
 func (suite *ProvisionTestSuit) TearDownSuite() {
-	//*
 	for _, dataset := range suite.createdDatasets {
 		err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
 			Name:     *parentDataset + "/" + dataset,
@@ -62,7 +61,6 @@ func (suite *ProvisionTestSuit) TearDownSuite() {
 		}, zfs.DestroyRecursively)
 		require.NoError(suite.T(), err)
 	}
-	//*/
 }
 
 func (suite *ProvisionTestSuit) TestDefaultProvisionDataset() {
@@ -126,18 +124,16 @@ func assertZfsReservation(t *testing.T, datasetName string, reserve bool) {
 	dataset, err := gozfs.GetDataset(datasetName)
 	assert.NoError(t, err)
 
-	refreserved, err2 := dataset.GetProperty("refreservation")
-	fmt.Fprintln(os.Stderr, "HOI! 1 ", refreserved, err2)
-	assert.NoError(t, err2)
+	refreserved, err := dataset.GetProperty("refreservation")
+	assert.NoError(t, err)
 
-	refquota, err3 := dataset.GetProperty("refquota")
-	fmt.Fprintln(os.Stderr, "HOI! 2 ", refquota, err3)
-	assert.NoError(t, err3)
+	refquota, err := dataset.GetProperty("refquota")
+	assert.NoError(t, err)
 
 	if reserve {
 		assert.Equal(t, refquota, refreserved)
 	} else {
-		assert.Equal(t, nil, refreserved)
+		assert.Equal(t, "none", refreserved)
 	}
 }
 
