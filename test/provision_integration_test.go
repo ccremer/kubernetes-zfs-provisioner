@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"context"
 	"flag"
-	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	gozfs "github.com/mistifyio/go-zfs/v3"
 	"math/rand"
 	"os"
@@ -23,6 +22,7 @@ import (
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 )
 
 var (
