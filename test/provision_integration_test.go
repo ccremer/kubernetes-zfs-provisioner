@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 	gozfs "github.com/mistifyio/go-zfs/v3"
 	"math/rand"
 	"os"
@@ -119,8 +120,6 @@ func provisionDataset(suite *ProvisionTestSuit, name string, parameters map[stri
 }
 
 func assertZfsReservation(t *testing.T, datasetName string, reserve bool) {
-	fmt.Fprintln(os.Stderr, datasetName)
-
 	dataset, err := gozfs.GetDataset(datasetName)
 	assert.NoError(t, err)
 
