@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/knadh/koanf v1.4.3
-	github.com/mistifyio/go-zfs v2.1.1+incompatible
 	github.com/stretchr/testify v1.8.0
+	github.com/mistifyio/go-zfs/v3 v3.0.1
 	k8s.io/api v0.24.3
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
@@ -30,7 +30,7 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
+	github.com/google/uuid v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

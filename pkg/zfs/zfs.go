@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"sync"
 
-	gozfs "github.com/mistifyio/go-zfs"
+	gozfs "github.com/mistifyio/go-zfs/v3"
 	"k8s.io/klog/v2"
 )
 

@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
-	gozfs "github.com/mistifyio/go-zfs"
+	gozfs "github.com/mistifyio/go-zfs/v3"
 	"math/rand"
 	"os"
 	"strconv"
