@@ -94,11 +94,12 @@ further significant to the provisioner.
 
 ### Storage space
 
-The provisioner uses the `refreservation` and `refquota` ZFS attributes to limit
-storage space for volumes. Each volume can not use more storage space than
-the given resource request and also reserves exactly that much. This means
-that over provisioning is not possible. Snapshots **do not** account for the
-storage space limit, however this provisioner does not do any snapshots or backups.
+By default, the provisioner uses the `refreservation` and `refquota` ZFS attributes
+to limit storage space for volumes. Each volume can not use more storage space than
+the given resource request and also reserves exactly that much. To disable this and
+enable thin provisioning, set `reserveSpace` to `false` in your storage class parameters.
+Snapshots **do not** account for the storage space limit, however this provisioner
+does not do any snapshots or backups.
 
 See [zfs(8)][man zfs] for more information.
 
