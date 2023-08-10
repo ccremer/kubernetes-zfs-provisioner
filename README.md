@@ -65,6 +65,7 @@ parameters:
   hostname: storage-1.domain.tld
   type: hostpath
   node: storage-1 # the kubernetes.io/hostname label if different than hostname parameter (optional)
+  reserveSpace: true
 ```
 
 Following example configures a storage class for ZFS over [NFS][nfs]:
@@ -80,6 +81,7 @@ parameters:
   hostname: storage-1.domain.tld
   type: nfs
   shareProperties: rw,no_root_squash # no_root_squash by default sets mode to 'ro'
+  reserveSpace: true
 ```
 For NFS, you can also specify other options, as described in [exports(5)][man exports].
 
