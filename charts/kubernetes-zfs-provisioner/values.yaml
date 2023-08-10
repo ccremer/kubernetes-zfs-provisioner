@@ -42,6 +42,8 @@ storageClass:
     #   # -- Override `kubernetes.io/hostname` from `hostName` parameter for
     #   # `HostPath` node affinity
     #   node: ""
+    #   # -- Reserve space for created datasets. Default is true. Use false to enable thin provisioning
+    #   reserveSpace: true
     #   # -- Annotations for the storage class
     #   # annotations:
     #   #   storageclass.kubernetes.io/is-default-class: "true"
