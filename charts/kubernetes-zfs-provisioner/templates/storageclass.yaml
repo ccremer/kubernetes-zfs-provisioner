@@ -19,6 +19,6 @@ parameters:
   type: {{ .type | default "nfs" }}
   node: {{ .node | default "''" }}
   shareProperties: {{ .shareProperties | default "''" }}
-  reserveSpace: {{ .reserveSpace | default "true" }}
+  reserveSpace: {{ coalesce (quote .reserveSpace) (quote true) }}
 {{- end }}
 {{- end }}
