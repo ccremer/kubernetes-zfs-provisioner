@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package test
@@ -6,12 +7,13 @@ import (
 	"bufio"
 	"context"
 	"flag"
-	gozfs "github.com/mistifyio/go-zfs/v3"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	gozfs "github.com/mistifyio/go-zfs/v3"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v8/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
