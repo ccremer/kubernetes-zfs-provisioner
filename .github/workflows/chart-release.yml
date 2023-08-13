@@ -24,13 +24,8 @@ jobs:
           fetch-depth: '0'
 
       - uses: actions/setup-go@v4
-
-      - uses: actions/cache@v3
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version-file: charts/go.mod
 
       - name: Configure Git
         run: |
