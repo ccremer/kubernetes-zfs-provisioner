@@ -41,9 +41,12 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 	storageRequest := options.PVC.Spec.Resources.Requests[v1.ResourceStorage]
 	storageRequestBytes := strconv.FormatInt(storageRequest.Value(), 10)
 	properties[RefQuotaProperty] = storageRequestBytes
-	properties[RefReservationProperty] = storageRequestBytes
 	properties[ManagedByProperty] = p.InstanceName
 	properties[ReclaimPolicyProperty] = string(reclaimPolicy)
+
+	if parameters.ReserveSpace {
+		properties[RefReservationProperty] = storageRequestBytes
+	}
 
 	dataset, err := p.zfs.CreateDataset(datasetPath, parameters.Hostname, properties)
 	if err != nil {

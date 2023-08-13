@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	gozfs "github.com/mistifyio/go-zfs/v3"
 	"math/rand"
 	"os"
 	"strconv"
@@ -30,13 +31,15 @@ var (
 
 type ProvisionTestSuit struct {
 	suite.Suite
-	p       *provisioner.ZFSProvisioner
-	dataset string
+	p               *provisioner.ZFSProvisioner
+	datasetPrefix   string
+	createdDatasets []string
 }
 
 func TestProvisionSuite(t *testing.T) {
 	s := ProvisionTestSuit{
-		dataset: "pv-test-" + strconv.Itoa(rand.Int()),
+		datasetPrefix:   "pv-test-" + strconv.Itoa(rand.Int()),
+		createdDatasets: make([]string, 0),
 	}
 	suite.Run(t, &s)
 }
@@ -52,35 +55,85 @@ func (suite *ProvisionTestSuit) SetupSuite() {
 }
 
 func (suite *ProvisionTestSuit) TearDownSuite() {
-	err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
-		Name:     *parentDataset + "/" + suite.dataset,
-		Hostname: "host",
-	}, zfs.DestroyRecursively)
-	require.NoError(suite.T(), err)
+	for _, dataset := range suite.createdDatasets {
+		err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
+			Name:     *parentDataset + "/" + dataset,
+			Hostname: "host",
+		}, zfs.DestroyRecursively)
+		require.NoError(suite.T(), err)
+	}
 }
 
-func (suite *ProvisionTestSuit) TestProvisionDataset() {
+func (suite *ProvisionTestSuit) TestDefaultProvisionDataset() {
+	dataset := provisionDataset(suite, "default", map[string]string{
+		provisioner.ParentDatasetParameter:   *parentDataset,
+		provisioner.HostnameParameter:        "localhost",
+		provisioner.TypeParameter:            "nfs",
+		provisioner.SharePropertiesParameter: "rw,no_root_squash",
+	})
+	assertZfsReservation(suite.T(), dataset, true)
+}
+
+func (suite *ProvisionTestSuit) TestThickProvisionDataset() {
+	dataset := provisionDataset(suite, "thick", map[string]string{
+		provisioner.ParentDatasetParameter:   *parentDataset,
+		provisioner.HostnameParameter:        "localhost",
+		provisioner.TypeParameter:            "nfs",
+		provisioner.SharePropertiesParameter: "rw,no_root_squash",
+		provisioner.ReserveSpaceParameter:    "true",
+	})
+	assertZfsReservation(suite.T(), dataset, true)
+}
+
+func (suite *ProvisionTestSuit) TestThinProvisionDataset() {
+	dataset := provisionDataset(suite, "thin", map[string]string{
+		provisioner.ParentDatasetParameter:   *parentDataset,
+		provisioner.HostnameParameter:        "localhost",
+		provisioner.TypeParameter:            "nfs",
+		provisioner.SharePropertiesParameter: "rw,no_root_squash",
+		provisioner.ReserveSpaceParameter:    "false",
+	})
+	assertZfsReservation(suite.T(), dataset, false)
+}
+
+func provisionDataset(suite *ProvisionTestSuit, name string, parameters map[string]string) string {
 	t := suite.T()
-	fullDataset := "/" + *parentDataset + "/" + suite.dataset
+	pvName := suite.datasetPrefix + "_" + name
+	fullDataset := *parentDataset + "/" + pvName
+	datasetDirectory := "/" + fullDataset
 	policy := v1.PersistentVolumeReclaimRetain
 	options := controller.ProvisionOptions{
-		PVName: suite.dataset,
+		PVName: pvName,
 		PVC:    newClaim(resource.MustParse("10M"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany}),
 		StorageClass: &storagev1.StorageClass{
-			Parameters: map[string]string{
-				provisioner.ParentDatasetParameter:   *parentDataset,
-				provisioner.HostnameParameter:        "localhost",
-				provisioner.TypeParameter:            "nfs",
-				provisioner.SharePropertiesParameter: "rw,no_root_squash",
-			},
+			Parameters:    parameters,
 			ReclaimPolicy: &policy,
 		},
 	}
 
 	_, _, err := suite.p.Provision(context.Background(), options)
+	suite.createdDatasets = append(suite.createdDatasets, pvName)
 	assert.NoError(t, err)
-	require.DirExists(t, fullDataset)
-	assertNfsExport(t, fullDataset)
+	require.DirExists(t, datasetDirectory)
+	assertNfsExport(t, datasetDirectory)
+	return fullDataset
+}
+
+func assertZfsReservation(t *testing.T, datasetName string, reserve bool) {
+	dataset, err := gozfs.GetDataset(datasetName)
+	assert.NoError(t, err)
+
+	refreserved, err := dataset.GetProperty("refreservation")
+	assert.NoError(t, err)
+
+	refquota, err := dataset.GetProperty("refquota")
+	assert.NoError(t, err)
+
+	if reserve {
+		assert.Equal(t, refquota, refreserved)
+	} else {
+		assert.Equal(t, "none", refreserved)
+	}
 }
 
 func assertNfsExport(t *testing.T, fullDataset string) {

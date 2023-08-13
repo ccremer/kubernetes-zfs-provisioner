@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	gozfs "github.com/mistifyio/go-zfs"
+	gozfs "github.com/mistifyio/go-zfs/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	core "k8s.io/api/core/v1"
