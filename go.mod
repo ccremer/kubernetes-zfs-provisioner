@@ -3,7 +3,9 @@ module github.com/ccremer/kubernetes-zfs-provisioner
 go 1.19
 
 require (
-	github.com/knadh/koanf v1.5.0
+	github.com/knadh/koanf/providers/confmap v0.1.0
+	github.com/knadh/koanf/providers/env v0.1.0
+	github.com/knadh/koanf/v2 v2.0.1
 	github.com/mistifyio/go-zfs/v3 v3.0.1
 	github.com/stretchr/testify v1.8.4
 	k8s.io/api v0.27.4
@@ -32,6 +34,7 @@ require (
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/miekg/dns v1.1.41 // indirect

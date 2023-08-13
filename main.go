@@ -11,7 +11,7 @@ import (
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 
-	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
