@@ -69,7 +69,9 @@ func Test_StorageClass_GivenClassesEnabled_WhenReserveSpaceUndefined_ThenRenderD
 	var class v1.StorageClass
 	helm.UnmarshalK8SYaml(t, output, &class)
 
-	assert.Equal(t, "true", class.Parameters["reserveSpace"])
+	value, exists := class.Parameters["reserveSpace"]
+	assert.False(t, exists)
+	assert.Empty(t, value)
 }
 
 func Test_StorageClass_GivenClassesEnabled_WhenReserveSpaceFalse_ThenRenderReserveSpace(t *testing.T) {

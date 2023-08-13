@@ -43,7 +43,7 @@ storageClass:
     #   # `HostPath` node affinity
     #   node: ""
     #   # -- Reserve space for created datasets. Default is true. Use false to enable thin provisioning
-    #   reserveSpace: true
+    #   reserveSpace: false
     #   # -- Annotations for the storage class
     #   # annotations:
     #   #   storageclass.kubernetes.io/is-default-class: "true"
