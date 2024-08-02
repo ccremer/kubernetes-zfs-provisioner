@@ -81,9 +81,7 @@ func loadDefaultValues() {
 func loadEnvironmentVariables() {
 	prefix := "ZFS_"
 	err := koanfInstance.Load(env.Provider(prefix, ".", func(s string) string {
-		s = strings.TrimPrefix(s, prefix)
-		s = strings.Replace(strings.ToLower(s), "_", "-", -1)
-		return s
+		return strings.ToLower(strings.TrimPrefix(s, prefix))
 	}), nil)
 	if err != nil {
 		klog.Fatalf("Could not load environment variables: %v", err)
