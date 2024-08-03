@@ -77,7 +77,7 @@ func TestNewStorageClassParameters(t *testing.T) {
 					SharePropertiesParameter: "rw",
 				},
 			},
-			want: &ZFSStorageClassParameters{NFS: &NFSParameters{ShareProperties: "rw"}},
+			want: &ZFSStorageClassParameters{NFSShareProperties: "rw"},
 		},
 		{
 			name: "GivenCorrectSpec_WhenTypeNfsWithoutProperties_ThenReturnNfsParametersWithDefault",
@@ -88,7 +88,7 @@ func TestNewStorageClassParameters(t *testing.T) {
 					TypeParameter:          "nfs",
 				},
 			},
-			want: &ZFSStorageClassParameters{NFS: &NFSParameters{ShareProperties: "on"}},
+			want: &ZFSStorageClassParameters{NFSShareProperties: "on"},
 		},
 		{
 			name: "GivenCorrectSpec_WhenTypeHostPath_ThenReturnHostPathParameters",
@@ -100,7 +100,7 @@ func TestNewStorageClassParameters(t *testing.T) {
 					NodeNameParameter:      "my-node",
 				},
 			},
-			want: &ZFSStorageClassParameters{HostPath: &HostPathParameters{NodeName: "my-node"}},
+			want: &ZFSStorageClassParameters{HostPathNodeName: "my-node"},
 		},
 	}
 	for _, tt := range tests {
@@ -112,8 +112,8 @@ func TestNewStorageClassParameters(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want.NFS, result.NFS)
-			assert.Equal(t, tt.want.HostPath, result.HostPath)
+			assert.Equal(t, tt.want.NFSShareProperties, result.NFSShareProperties)
+			assert.Equal(t, tt.want.HostPathNodeName, result.HostPathNodeName)
 		})
 	}
 }

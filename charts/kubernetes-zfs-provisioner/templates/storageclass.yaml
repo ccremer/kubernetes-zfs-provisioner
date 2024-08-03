@@ -12,6 +12,9 @@ metadata:
     {{ toYaml . | nindent 4 }}
 {{- end }}
 provisioner: {{ $.Values.provisioner.instance }}
+{{- if eq .type "auto" }}
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}
 reclaimPolicy: {{ .policy | default "Delete" }}
 parameters:
   parentDataset: {{ .parentDataset }}

@@ -53,6 +53,10 @@ func TestProvisionNfs(t *testing.T) {
 	pv, _, err := p.Provision(context.Background(), options)
 	require.NoError(t, err)
 	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
+	assert.Contains(t, pv.Spec.AccessModes, v1.ReadWriteOnce)
+	// Pods located on other nodes can mount this PV
+	assert.Contains(t, pv.Spec.AccessModes, v1.ReadOnlyMany)
+	assert.Contains(t, pv.Spec.AccessModes, v1.ReadWriteMany)
 
 	assert.Equal(t, v1.PersistentVolumeReclaimDelete, pv.Spec.PersistentVolumeReclaimPolicy)
 
@@ -65,10 +69,6 @@ func TestProvisionNfs(t *testing.T) {
 
 func assertBasics(t *testing.T, stub *zfsStub, pv *v1.PersistentVolume, expectedDataset string, expectedHost string) {
 	stub.AssertExpectations(t)
-
-	assert.Contains(t, pv.Spec.AccessModes, v1.ReadWriteOnce)
-	assert.Contains(t, pv.Spec.AccessModes, v1.ReadOnlyMany)
-	assert.Contains(t, pv.Spec.AccessModes, v1.ReadWriteMany)
 
 	assert.Contains(t, pv.Annotations, "my/annotation")
 	assert.Equal(t, expectedDataset, pv.Annotations[DatasetPathAnnotation])
@@ -111,6 +111,10 @@ func TestProvisionHostPath(t *testing.T) {
 	pv, _, err := p.Provision(context.Background(), options)
 	require.NoError(t, err)
 	assertBasics(t, stub, pv, expectedDatasetName, expectedHost)
+	assert.Contains(t, pv.Spec.AccessModes, v1.ReadWriteOnce)
+	// Pods located on other nodes cannot mount this PV
+	assert.NotContains(t, pv.Spec.AccessModes, v1.ReadOnlyMany)
+	assert.NotContains(t, pv.Spec.AccessModes, v1.ReadWriteMany)
 
 	assert.Equal(t, policy, pv.Spec.PersistentVolumeReclaimPolicy)
 

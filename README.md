@@ -15,6 +15,12 @@ but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] con
 
 ![architecture with Hostpath](architecture.hostpath.drawio.svg "Architecture with Hostpath provisioning")
 
+As a third option, if the ZFS host is part of the cluster, you can let the provisioner choose
+whether [NFS][nfs] or [HostPath][hostpath] is used with the `Auto` mode. If the scheduler
+decides to place a Pod onto the ZFS host, *and* the requested access mode in the Persistent Volume
+Claim is `ReadWriteOnce` (the volume can only be accessed by pods running on the same node)
+[HostPath][hostpath] will automatically be used, otherwise [NFS][nfs] will be used.
+
 Currently all ZFS attributes are inherited from the parent dataset.
 
 For more information about external storage in kubernetes, see
@@ -84,6 +90,26 @@ parameters:
   reserveSpace: true
 ```
 For NFS, you can also specify other options, as described in [exports(5)][man exports].
+
+The following example configures a storage class using the `Auto` type. The provisioner
+will decide whether [HostPath][hostpath] or [NFS][nfs] will be used based on where the
+pods are being scheduled.
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-nfs
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Retain
+parameters:
+  parentDataset: tank/kubernetes
+  hostname: storage-1.domain.tld
+  type: auto
+  node: storage-1 # the name of the node where the ZFS datasets are located.
+  shareProperties: rw,no_root_squash
+  reserveSpace: true
+```
 
 ## Notes
 
