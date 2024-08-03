@@ -6,7 +6,7 @@
 
 # Setup Multiarch builds with docker and QEMU, restart docker service!
 # https://github.com/docker/buildx#building-multi-platform-images
-
+version: 2
 builds:
   - env:
       - CGO_ENABLED=0 # this is needed to build the single binary
