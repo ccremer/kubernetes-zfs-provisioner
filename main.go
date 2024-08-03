@@ -2,42 +2,48 @@ package main
 
 import (
 	"context"
-	"net/http"
-	"strings"
-
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/env"
-	"k8s.io/klog/v2"
-
+	"fmt"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
+	"k8s.io/klog/v2"
+	"net/http"
+	"os"
+	"strconv"
 
-	"github.com/knadh/koanf/v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 )
 
 const (
-	metricsAddrKey         = "metrics_addr"
-	metricsPortKey         = "metrics_port"
-	kubeConfigPathKey      = "kube_config_path"
-	provisionerInstanceKey = "provisioner_instance"
+	metricsAddrKey         = "METRICS_ADDR"
+	metricsPortKey         = "METRICS_PORT"
+	kubeConfigPathKey      = "KUBE_CONFIG_PATH"
+	provisionerInstanceKey = "PROVISIONER_INSTANCE"
 )
+
+type Settings struct {
+	MetricsAddr         string
+	MetricsPort         int
+	KubeConfigPath      string
+	ProvisionerInstance string
+}
 
 var (
 	// These will be populated by Goreleaser at build time
-	version       = "snapshot"
-	commit        = "dirty"
-	koanfInstance = koanf.New(".")
+	version = "snapshot"
+	commit  = "dirty"
+
+	settings Settings
 )
 
 func main() {
-	loadDefaultValues()
 	loadEnvironmentVariables()
 
 	log := klog.NewKlogr()
 
-	config, err := clientcmd.BuildConfigFromFlags("", koanfInstance.String("kube_config_path"))
+	log.Info("Using configuration", "config", settings)
+
+	config, err := clientcmd.BuildConfigFromFlags("", settings.KubeConfigPath)
 	if err != nil {
 		klog.Fatalf("Couldn't get in-cluster or kubectl config: %v", err)
 	}
@@ -48,9 +54,8 @@ func main() {
 		klog.Fatalf("Failed to create kubernetes client: %v", err)
 	}
 
-	instance := koanfInstance.String(provisionerInstanceKey)
 	log.Info("Connected to cluster", "host", config.Host)
-	p, err := provisioner.NewZFSProvisioner(instance, log)
+	p, err := provisioner.NewZFSProvisioner(settings.ProvisionerInstance, log)
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
 	}
@@ -62,33 +67,44 @@ func main() {
 	pc := controller.NewProvisionController(
 		log,
 		clientset,
-		instance,
+		settings.ProvisionerInstance,
 		p,
-		controller.MetricsAddress(koanfInstance.String(metricsAddrKey)),
-		controller.MetricsPort(int32(koanfInstance.Int(metricsPortKey))),
+		controller.MetricsAddress(settings.MetricsAddr),
+		controller.MetricsPort(int32(settings.MetricsPort)),
 	)
 
 	log.Info("Starting provisioner", "version", version, "commit", commit)
 	pc.Run(context.Background())
 }
 
-func loadDefaultValues() {
-	_ = koanfInstance.Load(confmap.Provider(map[string]interface{}{
+func loadEnvironmentVariables() {
+	prefix := "ZFS_"
+
+	defaults := map[string]string{
 		metricsPortKey:         "8080",
 		metricsAddrKey:         "0.0.0.0",
 		kubeConfigPathKey:      "",
 		provisionerInstanceKey: "pv.kubernetes.io/zfs",
-	}, "."), nil)
+	}
+
+	for key, _ := range defaults {
+		value, found := os.LookupEnv(fmt.Sprintf("%s%s", prefix, key))
+		if found {
+			defaults[key] = value
+		}
+	}
+	settings = Settings{
+		MetricsAddr:         defaults[metricsAddrKey],
+		MetricsPort:         parseInt(defaults[metricsPortKey]),
+		KubeConfigPath:      defaults[kubeConfigPathKey],
+		ProvisionerInstance: defaults[provisionerInstanceKey],
+	}
 }
 
-func loadEnvironmentVariables() {
-	prefix := "ZFS_"
-	err := koanfInstance.Load(env.Provider(prefix, ".", func(s string) string {
-		s = strings.TrimPrefix(s, prefix)
-		s = strings.Replace(strings.ToLower(s), "_", "-", -1)
-		return s
-	}), nil)
+func parseInt(s string) int {
+	i, err := strconv.Atoi(s)
 	if err != nil {
-		klog.Fatalf("Could not load environment variables: %v", err)
+		klog.Fatalf("Failed to convert metrics port to integer: %v", err)
 	}
+	return i
 }
