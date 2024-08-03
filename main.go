@@ -14,7 +14,7 @@ import (
 	"github.com/knadh/koanf/v2"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 )
 
 const (
@@ -35,6 +35,8 @@ func main() {
 	loadDefaultValues()
 	loadEnvironmentVariables()
 
+	log := klog.NewKlogr()
+
 	config, err := clientcmd.BuildConfigFromFlags("", koanfInstance.String("kube_config_path"))
 	if err != nil {
 		klog.Fatalf("Couldn't get in-cluster or kubectl config: %v", err)
@@ -47,8 +49,8 @@ func main() {
 	}
 
 	instance := koanfInstance.String(provisionerInstanceKey)
-	klog.InfoS("Connected to cluster", "host", config.Host)
-	p, err := provisioner.NewZFSProvisioner(instance)
+	log.Info("Connected to cluster", "host", config.Host)
+	p, err := provisioner.NewZFSProvisioner(instance, log)
 	if err != nil {
 		klog.Fatalf("Failed to create ZFS provisioner: %v", err)
 	}
@@ -58,6 +60,7 @@ func main() {
 	})
 
 	pc := controller.NewProvisionController(
+		log,
 		clientset,
 		instance,
 		p,
@@ -65,7 +68,7 @@ func main() {
 		controller.MetricsPort(int32(koanfInstance.Int(metricsPortKey))),
 	)
 
-	klog.InfoS("Starting provisioner", "version", version, "commit", commit)
+	log.Info("Starting provisioner", "version", version, "commit", commit)
 	pc.Run(context.Background())
 }
 

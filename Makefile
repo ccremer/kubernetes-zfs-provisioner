@@ -5,6 +5,7 @@ MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-builtin-variables
 .SUFFIXES:
 .SECONDARY:
+.DEFAULT_GOAL := help
 
 include Makefile.vars.mk
 -include charts/charts.mk

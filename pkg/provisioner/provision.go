@@ -11,7 +11,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 )
 
 // Provision creates a PersistentVolume, sets quota and shares it via NFS.
@@ -55,7 +55,7 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 	if err := p.zfs.SetPermissions(dataset); err != nil {
 		return nil, controller.ProvisioningFinished, err
 	}
-	klog.InfoS("dataset created", "dataset", dataset.Name)
+	p.log.Info("dataset created", "dataset", dataset.Name)
 
 	// Copy the annotations from the claim and overwrite with ours
 	if options.PVC.Annotations == nil {
