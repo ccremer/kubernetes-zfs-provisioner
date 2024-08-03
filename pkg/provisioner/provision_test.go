@@ -13,7 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 )
 
 func TestProvisionNfs(t *testing.T) {
@@ -122,7 +122,7 @@ func TestProvisionHostPath(t *testing.T) {
 	assert.Contains(t, pv.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values, "node")
 }
 
-func newClaim(capacity resource.Quantity, accessmodes []v1.PersistentVolumeAccessMode) *v1.PersistentVolumeClaim {
+func newClaim(capacity resource.Quantity, accessModes []v1.PersistentVolumeAccessMode) *v1.PersistentVolumeClaim {
 	storageClassName := "zfs"
 	claim := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,8 +131,8 @@ func newClaim(capacity resource.Quantity, accessmodes []v1.PersistentVolumeAcces
 			},
 		},
 		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: accessmodes,
-			Resources: v1.ResourceRequirements{
+			AccessModes: accessModes,
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: capacity,
 				},

@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package test
 
@@ -7,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"k8s.io/klog/v2"
 	"math/rand"
 	"os"
 	"strconv"
@@ -21,7 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v9/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/provisioner"
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
@@ -50,8 +50,9 @@ func (suite *ProvisionTestSuit) SetupSuite() {
 	path := os.Getenv("PATH")
 	pwd, _ := os.Getwd()
 	err := os.Setenv("PATH", pwd+":"+path)
+	log := klog.NewKlogr()
 	require.NoError(suite.T(), err)
-	prov, err := provisioner.NewZFSProvisioner("pv.kubernetes.io/zfs")
+	prov, err := provisioner.NewZFSProvisioner("pv.kubernetes.io/zfs", log)
 	require.NoError(suite.T(), err)
 	suite.p = prov
 }
@@ -157,12 +158,12 @@ func assertNfsExport(t *testing.T, fullDataset string) {
 	assert.True(t, found)
 }
 
-func newClaim(capacity resource.Quantity, accessmodes []v1.PersistentVolumeAccessMode) *v1.PersistentVolumeClaim {
+func newClaim(capacity resource.Quantity, accessModes []v1.PersistentVolumeAccessMode) *v1.PersistentVolumeClaim {
 	storageClassName := "zfs"
 	claim := &v1.PersistentVolumeClaim{
 		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: accessmodes,
-			Resources: v1.ResourceRequirements{
+			AccessModes: accessModes,
+			Resources: v1.VolumeResourceRequirements{
 				Requests: v1.ResourceList{
 					v1.ResourceStorage: capacity,
 				},
