@@ -1,6 +1,6 @@
 # kubernetes-zfs-provisioner
 
-![Version: 2.2.1](https://img.shields.io/badge/Version-2.2.1-informational?style=flat-square)
+![Version: 2.3.0](https://img.shields.io/badge/Version-2.3.0-informational?style=flat-square)
 
 Dynamic ZFS persistent volume provisioner for Kubernetes
 
@@ -76,3 +76,4 @@ No 1.x or 0.x chart releases will be migrated from the `ccremer/charts` Helm rep
 * The `image.registry` has changed from `quay.io` to `ghcr.io`.
 * The `image.tag` has changed from to `v1.1.0` to `v1`.
 * The `image.pullPolicy` has changed from `IfNotPresent` to `Always`.
+
