@@ -11,6 +11,7 @@ const (
 
 	RefQuotaProperty       = "refquota"
 	RefReservationProperty = "refreservation"
+	ShareNfsProperty       = "sharenfs"
 	ManagedByProperty      = "io.kubernetes.pv.zfs:managed_by"
 	ReclaimPolicyProperty  = "io.kubernetes.pv.zfs:reclaim_policy"
 )
