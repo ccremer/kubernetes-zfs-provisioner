@@ -73,7 +73,7 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 		},
 		Spec: v1.PersistentVolumeSpec{
 			PersistentVolumeReclaimPolicy: reclaimPolicy,
-			AccessModes:                   createAccessModes(useHostPath),
+			AccessModes:                   createAccessModes(options, useHostPath),
 			Capacity: v1.ResourceList{
 				v1.ResourceStorage: options.PVC.Spec.Resources.Requests[v1.ResourceStorage],
 			},
@@ -91,17 +91,17 @@ func canUseHostPath(parameters *ZFSStorageClassParameters, options controller.Pr
 	case HostPath:
 		return true
 	case Auto:
-		if options.SelectedNode == nil || parameters.HostPathNodeName != options.SelectedNode.Name {
-			return false
-		}
-		if slices.Contains(options.PVC.Spec.AccessModes, v1.ReadOnlyMany) || slices.Contains(options.PVC.Spec.AccessModes, v1.ReadWriteMany) {
-			return false
+		if !slices.Contains(options.PVC.Spec.AccessModes, v1.ReadOnlyMany) && !slices.Contains(options.PVC.Spec.AccessModes, v1.ReadWriteMany) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
-func createAccessModes(useHostPath bool) []v1.PersistentVolumeAccessMode {
+func createAccessModes(options controller.ProvisionOptions, useHostPath bool) []v1.PersistentVolumeAccessMode {
+	if slices.Contains(options.PVC.Spec.AccessModes, v1.ReadWriteOncePod) {
+		return []v1.PersistentVolumeAccessMode{v1.ReadWriteOncePod}
+	}
 	accessModes := []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}
 	if !useHostPath {
 		accessModes = append(accessModes, v1.ReadOnlyMany, v1.ReadWriteMany)
