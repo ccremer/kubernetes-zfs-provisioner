@@ -15,6 +15,16 @@ but the `PersistentVolume` objects will have a [NodeAffinity][node affinity] con
 
 ![architecture with Hostpath](architecture.hostpath.drawio.svg "Architecture with Hostpath provisioning")
 
+As a third option, if the ZFS host is part of the cluster, you can let the provisioner choose
+whether [NFS][nfs] or [HostPath][hostpath] is used with the `Auto` mode. If the requested
+[AccessModes][access modes] in the Persistent Volume Claim contains `ReadWriteOnce` (the volume
+can only be accessed by pods running on the same node), or `ReadWriteOncePod` (the volume can only
+be accessed by one single Pod at any time), then [HostPath][hostpath] will be used and
+the [NodeAffinity][node affinity] will be configured on the `PersistentVolume` objects so the
+scheduler will automatically place the corresponding Pods onto the ZFS host. Otherwise
+[NFS][nfs] will be used and [NodeAffinity][node affinity] will not be set. If multiple (exclusive)
+[AccessModes][access modes] are given, [NFS][nfs] takes precedence.
+
 Currently all ZFS attributes are inherited from the parent dataset.
 
 For more information about external storage in kubernetes, see
@@ -84,6 +94,26 @@ parameters:
   reserveSpace: true
 ```
 For NFS, you can also specify other options, as described in [exports(5)][man exports].
+
+The following example configures a storage class using the `Auto` type. The provisioner
+will decide whether [HostPath][hostpath] or [NFS][nfs] will be used based on the
+[AccessModess][access modes] requested by the persistent volume claim.
+
+```yaml
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: zfs-nfs
+provisioner: pv.kubernetes.io/zfs
+reclaimPolicy: Retain
+parameters:
+  parentDataset: tank/kubernetes
+  hostname: storage-1.domain.tld
+  type: auto
+  node: storage-1 # the name of the node where the ZFS datasets are located.
+  shareProperties: rw,no_root_squash
+  reserveSpace: true
+```
 
 ## Notes
 
@@ -189,3 +219,4 @@ I (@ccremer) have been allowed to take over maintenance for this repository.
 [helm chart]: https://github.com/ccremer/kubernetes-zfs-provisioner/blob/master/charts/kubernetes-zfs-provisioner/README.md
 [gentics]: https://www.gentics.com/genticscms/index.en.html
 [gentics repo]: https://github.com/gentics/kubernetes-zfs-provisioner
+[access modes]: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes

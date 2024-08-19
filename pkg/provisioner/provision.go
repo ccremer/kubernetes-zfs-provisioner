@@ -3,9 +3,8 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
-
-	"k8s.io/klog/v2"
 
 	"github.com/ccremer/kubernetes-zfs-provisioner/pkg/zfs"
 
@@ -24,8 +23,9 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 	datasetPath := fmt.Sprintf("%s/%s", parameters.ParentDataset, options.PVName)
 	properties := make(map[string]string)
 
-	if parameters.NFS != nil {
-		properties["sharenfs"] = parameters.NFS.ShareProperties
+	useHostPath := canUseHostPath(parameters, options)
+	if !useHostPath {
+		properties[ShareNfsProperty] = parameters.NFSShareProperties
 	}
 
 	var reclaimPolicy v1.PersistentVolumeReclaimPolicy
@@ -73,28 +73,44 @@ func (p *ZFSProvisioner) Provision(ctx context.Context, options controller.Provi
 		},
 		Spec: v1.PersistentVolumeSpec{
 			PersistentVolumeReclaimPolicy: reclaimPolicy,
-			AccessModes:                   []v1.PersistentVolumeAccessMode{v1.ReadWriteMany, v1.ReadOnlyMany, v1.ReadWriteOnce},
+			AccessModes:                   createAccessModes(options, useHostPath),
 			Capacity: v1.ResourceList{
 				v1.ResourceStorage: options.PVC.Spec.Resources.Requests[v1.ResourceStorage],
 			},
-			PersistentVolumeSource: createVolumeSource(parameters, dataset),
-			NodeAffinity:           createNodeAffinity(parameters),
+			PersistentVolumeSource: createVolumeSource(parameters, dataset, useHostPath),
+			NodeAffinity:           createNodeAffinity(parameters, useHostPath),
 		},
 	}
 	return pv, controller.ProvisioningFinished, nil
 }
 
-func createVolumeSource(parameters *ZFSStorageClassParameters, dataset *zfs.Dataset) v1.PersistentVolumeSource {
-	if parameters.NFS != nil {
-		return v1.PersistentVolumeSource{
-			NFS: &v1.NFSVolumeSource{
-				Server:   parameters.Hostname,
-				Path:     dataset.Mountpoint,
-				ReadOnly: false,
-			},
+func canUseHostPath(parameters *ZFSStorageClassParameters, options controller.ProvisionOptions) bool {
+	switch parameters.Type {
+	case Nfs:
+		return false
+	case HostPath:
+		return true
+	case Auto:
+		if !slices.Contains(options.PVC.Spec.AccessModes, v1.ReadOnlyMany) && !slices.Contains(options.PVC.Spec.AccessModes, v1.ReadWriteMany) {
+			return true
 		}
 	}
-	if parameters.HostPath != nil {
+	return false
+}
+
+func createAccessModes(options controller.ProvisionOptions, useHostPath bool) []v1.PersistentVolumeAccessMode {
+	if slices.Contains(options.PVC.Spec.AccessModes, v1.ReadWriteOncePod) {
+		return []v1.PersistentVolumeAccessMode{v1.ReadWriteOncePod}
+	}
+	accessModes := []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}
+	if !useHostPath {
+		accessModes = append(accessModes, v1.ReadOnlyMany, v1.ReadWriteMany)
+	}
+	return accessModes
+}
+
+func createVolumeSource(parameters *ZFSStorageClassParameters, dataset *zfs.Dataset, useHostPath bool) v1.PersistentVolumeSource {
+	if useHostPath {
 		hostPathType := v1.HostPathDirectory
 		return v1.PersistentVolumeSource{
 			HostPath: &v1.HostPathVolumeSource{
@@ -103,27 +119,34 @@ func createVolumeSource(parameters *ZFSStorageClassParameters, dataset *zfs.Data
 			},
 		}
 	}
-	klog.Exitf("Programmer error: Missing implementation for volume source: %v", parameters)
-	return v1.PersistentVolumeSource{}
+
+	return v1.PersistentVolumeSource{
+		NFS: &v1.NFSVolumeSource{
+			Server:   parameters.Hostname,
+			Path:     dataset.Mountpoint,
+			ReadOnly: false,
+		},
+	}
 }
 
-func createNodeAffinity(parameters *ZFSStorageClassParameters) *v1.VolumeNodeAffinity {
-	if parameters.HostPath != nil {
-		node := parameters.HostPath.NodeName
-		if node == "" {
-			node = parameters.Hostname
-		}
-		return &v1.VolumeNodeAffinity{Required: &v1.NodeSelector{NodeSelectorTerms: []v1.NodeSelectorTerm{
-			{
-				MatchExpressions: []v1.NodeSelectorRequirement{
-					{
-						Values:   []string{node},
-						Operator: v1.NodeSelectorOpIn,
-						Key:      v1.LabelHostname,
-					},
+func createNodeAffinity(parameters *ZFSStorageClassParameters, useHostPath bool) *v1.VolumeNodeAffinity {
+	if !useHostPath {
+		return nil
+	}
+
+	node := parameters.HostPathNodeName
+	if node == "" {
+		node = parameters.Hostname
+	}
+	return &v1.VolumeNodeAffinity{Required: &v1.NodeSelector{NodeSelectorTerms: []v1.NodeSelectorTerm{
+		{
+			MatchExpressions: []v1.NodeSelectorRequirement{
+				{
+					Values:   []string{node},
+					Operator: v1.NodeSelectorOpIn,
+					Key:      v1.LabelHostname,
 				},
 			},
-		}}}
-	}
-	return nil
+		},
+	}}}
 }

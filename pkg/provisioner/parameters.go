@@ -19,11 +19,19 @@ const (
 parameters:
   parentDataset: tank/volumes
   hostname: my-zfs-host.localdomain
-  type: nfs|hostpath
+  type: nfs|hostPath|auto
   shareProperties: rw=10.0.0.0/8,no_root_squash
   node: my-zfs-host
   reserveSpace: true|false
 */
+
+type ProvisioningType string
+
+const (
+	Nfs      ProvisioningType = "nfs"
+	HostPath ProvisioningType = "hostPath"
+	Auto     ProvisioningType = "auto"
+)
 
 type (
 	// ZFSStorageClassParameters represents the parameters on the `StorageClass`
@@ -32,18 +40,13 @@ type (
 		// ParentDataset of the zpool. Needs to be existing on the target ZFS host.
 		ParentDataset string
 		// Hostname of the target ZFS host. Will be used to connect over SSH.
-		Hostname     string
-		NFS          *NFSParameters
-		HostPath     *HostPathParameters
-		ReserveSpace bool
-	}
-	NFSParameters struct {
-		// ShareProperties specifies additional properties to pass to 'zfs create sharenfs=%s'.
-		ShareProperties string
-	}
-	HostPathParameters struct {
-		// NodeName overrides the hostname if the Kubernetes node name is different than the ZFS target host. Used for Affinity
-		NodeName string
+		Hostname string
+		Type     ProvisioningType
+		// NFSShareProperties specifies additional properties to pass to 'zfs create sharenfs=%s'.
+		NFSShareProperties string
+		// HostPathNodeName overrides the hostname if the Kubernetes node name is different than the ZFS target host. Used for Affinity
+		HostPathNodeName string
+		ReserveSpace     bool
 	}
 )
 
@@ -79,16 +82,26 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 	typeParam := parameters[TypeParameter]
 	switch typeParam {
 	case "hostpath", "hostPath", "HostPath", "Hostpath", "HOSTPATH":
-		p.HostPath = &HostPathParameters{NodeName: parameters[NodeNameParameter]}
-		return p, nil
+		p.Type = HostPath
 	case "nfs", "Nfs", "NFS":
+		p.Type = Nfs
+	case "auto", "Auto", "AUTO":
+		p.Type = Auto
+	default:
+		return nil, fmt.Errorf("invalid '%s' parameter value: %s", TypeParameter, typeParam)
+	}
+
+	if p.Type == HostPath || p.Type == Auto {
+		p.HostPathNodeName = parameters[NodeNameParameter]
+	}
+
+	if p.Type == Nfs || p.Type == Auto {
 		shareProps := parameters[SharePropertiesParameter]
 		if shareProps == "" {
 			shareProps = "on"
 		}
-		p.NFS = &NFSParameters{ShareProperties: shareProps}
-		return p, nil
-	default:
-		return nil, fmt.Errorf("invalid '%s' parameter value: %s", TypeParameter, typeParam)
+		p.NFSShareProperties = shareProps
 	}
+
+	return p, nil
 }

@@ -37,7 +37,7 @@ storageClass:
     #   policy: "Delete"
     #   # -- NFS export properties (see `exports(5)`)
     #   shareProperties: ""
-    #   # -- Provision type, one of [`nfs`, `hostpath`]
+    #   # -- Provision type, one of [`nfs`, `hostpath`, `auto`]
     #   type: "nfs"
     #   # -- Override `kubernetes.io/hostname` from `hostName` parameter for
     #   # `HostPath` node affinity
