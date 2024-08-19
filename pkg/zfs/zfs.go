@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 
 	gozfs "github.com/mistifyio/go-zfs/v3"
@@ -114,7 +115,18 @@ func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
 	if dataset.Mountpoint == "" {
 		return fmt.Errorf("undefined mountpoint for dataset: %s", dataset.Name)
 	}
-	cmd := exec.Command("update-permissions", dataset.Hostname, dataset.Mountpoint)
+
+	globalLock.Lock()
+	defer globalLock.Unlock()
+	if err := setEnvironmentVars(dataset.Hostname); err != nil {
+		return err
+	}
+	cmd := exec.Command("update-permissions", dataset.Mountpoint)
+	if !filepath.IsAbs(cmd.Path) {
+		// update-permissions not found in PATH
+		cmd = exec.Command("chmod", "g+w", dataset.Mountpoint)
+	}
+
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("could not update permissions on '%s': %w: %s", dataset.Hostname, err, out)
