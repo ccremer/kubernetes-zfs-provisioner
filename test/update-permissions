@@ -5,6 +5,6 @@ set -eo pipefail
 zfs_mod="${ZFS_MOD:-g+w}"
 chmod_bin=${ZFS_CHOWN_BIN:-chmod}
 
-zfs_mountpoint="${2}"
+zfs_mountpoint="${1}"
 
 ${chmod_bin} ${zfs_mod} ${zfs_mountpoint}
