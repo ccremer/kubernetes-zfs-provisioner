@@ -122,15 +122,25 @@ func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
 		return err
 	}
 	cmd := exec.Command("update-permissions", dataset.Mountpoint)
-	if !filepath.IsAbs(cmd.Path) {
-		// update-permissions not found in PATH
-		cmd = exec.Command("chmod", "g+w", dataset.Mountpoint)
+	if filepath.IsAbs(cmd.Path) {
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("could not update permissions on '%s': %w: %s", dataset.Hostname, err, out)
+		}
+		return nil
 	}
 
-	out, err := cmd.CombinedOutput()
+	// update-permissions executable not found in PATH
+	st, err := os.Lstat(dataset.Mountpoint)
 	if err != nil {
-		return fmt.Errorf("could not update permissions on '%s': %w: %s", dataset.Hostname, err, out)
+		return err
 	}
+
+	// Add group write bit
+	if err := os.Chmod(dataset.Mountpoint, st.Mode()|0o020); err != nil {
+		return err
+	}
+
 	return nil
 }
 
