@@ -1,6 +1,6 @@
 # Looking for maintainer
 
-See #137
+See [137](https://github.com/ccremer/kubernetes-zfs-provisioner/issues/137)
 
 # Dynamic ZFS provisioner for Kubernetes
 
