@@ -2,7 +2,7 @@ module github.com/ccremer/kubernetes-zfs-provisioner
 
 go 1.22.0
 
-toolchain go1.22.5
+toolchain go1.24.4
 
 require (
 	github.com/mistifyio/go-zfs/v3 v3.0.1
