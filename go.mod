@@ -7,9 +7,9 @@ toolchain go1.22.5
 require (
 	github.com/mistifyio/go-zfs/v3 v3.0.1
 	github.com/stretchr/testify v1.9.0
-	k8s.io/api v0.30.3
-	k8s.io/apimachinery v0.30.3
-	k8s.io/client-go v0.30.3
+	k8s.io/api v0.33.2
+	k8s.io/apimachinery v0.33.2
+	k8s.io/client-go v0.33.2
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/sig-storage-lib-external-provisioner/v10 v10.0.0
 )
