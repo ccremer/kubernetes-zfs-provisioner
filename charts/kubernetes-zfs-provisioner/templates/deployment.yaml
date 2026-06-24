@@ -4,6 +4,7 @@ metadata:
   name: {{ include "kubernetes-zfs-provisioner.fullname" . }}
   labels:
     {{- include "kubernetes-zfs-provisioner.labels" . | nindent 4 }}
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
