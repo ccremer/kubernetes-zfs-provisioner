@@ -1,6 +1,6 @@
 # Dynamic ZFS provisioner for Kubernetes
 
-[![Build](https://img.shields.io/github/workflow/status/ccremer/kubernetes-zfs-provisioner/Test)][build]
+[![Build](https://img.shields.io/github/actions/workflow/status/ccremer/kubernetes-zfs-provisioner/test.yaml)][build]
 ![Go version](https://img.shields.io/github/go-mod/go-version/ccremer/kubernetes-zfs-provisioner)
 [![Version](https://img.shields.io/github/v/release/ccremer/kubernetes-zfs-provisioner)][releases]
 [![GitHub downloads](https://img.shields.io/github/downloads/ccremer/kubernetes-zfs-provisioner/total)][releases]
