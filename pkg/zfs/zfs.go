@@ -1,19 +1,18 @@
 package zfs
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 
-	gozfs "github.com/mistifyio/go-zfs/v3"
 	"k8s.io/klog/v2"
 )
 
 type (
-	// Interface abstracts the underlying ZFS library with the minimum functionality implemented
+	// Interface abstracts the underlying ZFS host with the minimum functionality implemented
 	Interface interface {
 		GetDataset(name string, hostname string) (*Dataset, error)
 		CreateDataset(name string, hostname string, properties map[string]string) (*Dataset, error)
@@ -22,90 +21,121 @@ type (
 	}
 	// Dataset is a representation of a ZFS dataset
 	Dataset struct {
-		datasetImpl *gozfs.Dataset
-
 		Name       string
 		Mountpoint string
 		Hostname   string
 	}
 	DestroyFlag int
-	zfsImpl     struct{}
+
+	// zfsImpl talks to remote ZFS hosts over a native Go SSH connection. The
+	// target host is bound to the connection (no process-global env var), and
+	// every zfs/chmod invocation is argument-quoted in Go rather than by a
+	// remote shell.
+	zfsImpl struct {
+		once    sync.Once
+		initErr error
+		pool    *sshPool
+		cfg     sshConfig
+	}
 )
 
 const (
 	DestroyRecursively DestroyFlag = 2
-	HostEnvVar                     = "ZFS_HOST"
 )
 
-var (
-	globalLock = sync.Mutex{}
-)
+func NewInterface() *zfsImpl {
+	return &zfsImpl{}
+}
+
+// ensure lazily builds the SSH pool so construction never fails and the pod can
+// start before the ZFS host is reachable; the first operation surfaces any
+// configuration error.
+func (z *zfsImpl) ensure() error {
+	z.once.Do(func() {
+		z.cfg = loadSSHConfig()
+		z.pool, z.initErr = newSSHPool(z.cfg)
+	})
+	return z.initErr
+}
+
+func opCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 60*time.Second)
+}
 
 func (z *zfsImpl) GetDataset(name string, hostname string) (*Dataset, error) {
-	klog.V(3).Info("acquiring lock...")
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	if err := setEnvironmentVars(hostname); err != nil {
+	if err := z.ensure(); err != nil {
 		return nil, err
 	}
-	dataset, err := gozfs.GetDataset(name)
+	ctx, cancel := opCtx()
+	defer cancel()
+	return z.getDataset(ctx, name, hostname)
+}
+
+func (z *zfsImpl) getDataset(ctx context.Context, name, hostname string) (*Dataset, error) {
+	out, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, "list", "-Hp", "-o", "name,mountpoint", name)
 	if err != nil {
 		return nil, err
 	}
-	return &Dataset{
-		datasetImpl: dataset,
-		Name:        dataset.Name,
-		Mountpoint:  dataset.Mountpoint,
-		Hostname:    hostname,
-	}, err
+	line := strings.TrimSpace(string(out))
+	fields := strings.Split(line, "\t")
+	if len(fields) < 2 {
+		return nil, fmt.Errorf("unexpected 'zfs list' output for %s: %q", name, line)
+	}
+	return &Dataset{Name: fields[0], Mountpoint: fields[1], Hostname: hostname}, nil
+}
+
+func (z *zfsImpl) exists(ctx context.Context, name, hostname string) bool {
+	_, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, "list", "-H", "-o", "name", name)
+	return err == nil
 }
 
 func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[string]string) (*Dataset, error) {
-	klog.V(3).Info("acquiring lock...")
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	if err := setEnvironmentVars(hostname); err != nil {
+	if err := z.ensure(); err != nil {
 		return nil, err
 	}
+	ctx, cancel := opCtx()
+	defer cancel()
+
 	klog.V(3).InfoS("creating dataset", "name", name, "host", hostname)
-	dataset, err := gozfs.CreateFilesystem(name, properties)
-	if err != nil {
-		return nil, err
+	args := []string{"create"}
+	for k, v := range properties {
+		args = append(args, "-o", k+"="+v)
 	}
-	return &Dataset{
-		datasetImpl: dataset,
-		Name:        dataset.Name,
-		Mountpoint:  dataset.Mountpoint,
-		Hostname:    hostname,
-	}, err
+	args = append(args, name)
+
+	if _, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, args...); err != nil {
+		// Idempotent: a retried Provision may find its own prior dataset. PV
+		// names are unique (pvc-<uuid>), so a pre-existing dataset is never a
+		// foreign collision — the desired end-state is already met.
+		if !z.exists(ctx, name, hostname) {
+			return nil, err
+		}
+		klog.V(3).InfoS("dataset already exists, treating create as idempotent", "name", name, "host", hostname)
+	}
+	return z.getDataset(ctx, name, hostname)
 }
 
 func (z *zfsImpl) DestroyDataset(dataset *Dataset, flag DestroyFlag) error {
 	if err := validateDataset(dataset); err != nil {
 		return err
 	}
-	if dataset.datasetImpl == nil {
-		ds, err := z.GetDataset(dataset.Name, dataset.Hostname)
-		if err != nil {
-			return err
-		}
-		dataset.datasetImpl = ds.datasetImpl
-	}
-	var destrFlag gozfs.DestroyFlag
-	switch flag {
-	case DestroyRecursively:
-		destrFlag = gozfs.DestroyRecursive
-		break
-	default:
+	if flag != DestroyRecursively {
 		return fmt.Errorf("programmer error: flag not implemented: %d", flag)
 	}
-	klog.V(3).Info("acquiring lock...")
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	if err := setEnvironmentVars(dataset.Hostname); err != nil {
+	if err := z.ensure(); err != nil {
 		return err
 	}
-	return dataset.datasetImpl.Destroy(destrFlag)
+	ctx, cancel := opCtx()
+	defer cancel()
+
+	if _, err := z.pool.run(ctx, dataset.Hostname, z.cfg.zfsBin, "destroy", "-r", dataset.Name); err != nil {
+		// Idempotent: if the dataset is already gone, the desired end-state is met.
+		if z.exists(ctx, dataset.Name, dataset.Hostname) {
+			return err
+		}
+		klog.V(3).InfoS("dataset already absent, treating destroy as idempotent", "name", dataset.Name, "host", dataset.Hostname)
+	}
+	return nil
 }
 
 func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
@@ -115,41 +145,17 @@ func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
 	if dataset.Mountpoint == "" {
 		return fmt.Errorf("undefined mountpoint for dataset: %s", dataset.Name)
 	}
-
-	globalLock.Lock()
-	defer globalLock.Unlock()
-	if err := setEnvironmentVars(dataset.Hostname); err != nil {
+	if err := z.ensure(); err != nil {
 		return err
 	}
-	cmd := exec.Command("update-permissions", dataset.Mountpoint)
-	if filepath.IsAbs(cmd.Path) {
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("could not update permissions on '%s': %w: %s", dataset.Hostname, err, out)
-		}
-		return nil
-	}
+	ctx, cancel := opCtx()
+	defer cancel()
 
-	// update-permissions executable not found in PATH
-	st, err := os.Lstat(dataset.Mountpoint)
-	if err != nil {
-		return err
+	// chmod g+w on the ZFS host (replaces docker/update-permissions.sh).
+	if _, err := z.pool.run(ctx, dataset.Hostname, z.cfg.chownBin, z.cfg.chmodArg, dataset.Mountpoint); err != nil {
+		return fmt.Errorf("could not update permissions on '%s': %w", dataset.Hostname, err)
 	}
-
-	// Add group write bit
-	if err := os.Chmod(dataset.Mountpoint, st.Mode()|0o020); err != nil {
-		return err
-	}
-
 	return nil
-}
-
-func NewInterface() *zfsImpl {
-	return &zfsImpl{}
-}
-
-func setEnvironmentVars(hostName string) error {
-	return os.Setenv(HostEnvVar, hostName)
 }
 
 func validateDataset(dataset *Dataset) error {
