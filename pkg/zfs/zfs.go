@@ -27,15 +27,18 @@ type (
 	}
 	DestroyFlag int
 
-	// zfsImpl talks to remote ZFS hosts over a native Go SSH connection. The
-	// target host is bound to the connection (no process-global env var), and
-	// every zfs/chmod invocation is argument-quoted in Go rather than by a
-	// remote shell.
+	// zfsImpl talks to ZFS hosts either over a native Go SSH connection or, when
+	// running on the ZFS host itself (localhost or ZFS_EXEC_LOCAL=true), by local
+	// exec. The target host is bound to the connection, not to a process-global
+	// env var, and every zfs/chmod invocation is argument-quoted in Go (SSH) or
+	// passed as argv (local) rather than parsed by a remote shell.
 	zfsImpl struct {
-		once    sync.Once
-		initErr error
-		pool    *sshPool
+		cfgOnce sync.Once
 		cfg     sshConfig
+
+		poolOnce sync.Once
+		pool     *sshPool
+		poolErr  error
 	}
 )
 
@@ -47,15 +50,24 @@ func NewInterface() *zfsImpl {
 	return &zfsImpl{}
 }
 
-// ensure lazily builds the SSH pool so construction never fails and the pod can
-// start before the ZFS host is reachable; the first operation surfaces any
-// configuration error.
-func (z *zfsImpl) ensure() error {
-	z.once.Do(func() {
-		z.cfg = loadSSHConfig()
-		z.pool, z.initErr = newSSHPool(z.cfg)
-	})
-	return z.initErr
+func (z *zfsImpl) config() sshConfig {
+	z.cfgOnce.Do(func() { z.cfg = loadSSHConfig() })
+	return z.cfg
+}
+
+// run dispatches a command to the local host or over SSH depending on the target
+// host. The SSH pool is built lazily on first remote use, so a purely local
+// deployment never needs SSH key material.
+func (z *zfsImpl) run(ctx context.Context, host string, binPrefix []string, args ...string) ([]byte, error) {
+	cfg := z.config()
+	if cfg.isLocalHost(host) {
+		return runLocal(ctx, binPrefix, args...)
+	}
+	z.poolOnce.Do(func() { z.pool, z.poolErr = newSSHPool(cfg) })
+	if z.poolErr != nil {
+		return nil, z.poolErr
+	}
+	return z.pool.run(ctx, host, binPrefix, args...)
 }
 
 func opCtx() (context.Context, context.CancelFunc) {
@@ -63,16 +75,13 @@ func opCtx() (context.Context, context.CancelFunc) {
 }
 
 func (z *zfsImpl) GetDataset(name string, hostname string) (*Dataset, error) {
-	if err := z.ensure(); err != nil {
-		return nil, err
-	}
 	ctx, cancel := opCtx()
 	defer cancel()
 	return z.getDataset(ctx, name, hostname)
 }
 
 func (z *zfsImpl) getDataset(ctx context.Context, name, hostname string) (*Dataset, error) {
-	out, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, "list", "-Hp", "-o", "name,mountpoint", name)
+	out, err := z.run(ctx, hostname, z.config().zfsBin, "list", "-Hp", "-o", "name,mountpoint", name)
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +94,11 @@ func (z *zfsImpl) getDataset(ctx context.Context, name, hostname string) (*Datas
 }
 
 func (z *zfsImpl) exists(ctx context.Context, name, hostname string) bool {
-	_, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, "list", "-H", "-o", "name", name)
+	_, err := z.run(ctx, hostname, z.config().zfsBin, "list", "-H", "-o", "name", name)
 	return err == nil
 }
 
 func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[string]string) (*Dataset, error) {
-	if err := z.ensure(); err != nil {
-		return nil, err
-	}
 	ctx, cancel := opCtx()
 	defer cancel()
 
@@ -103,7 +109,7 @@ func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[str
 	}
 	args = append(args, name)
 
-	if _, err := z.pool.run(ctx, hostname, z.cfg.zfsBin, args...); err != nil {
+	if _, err := z.run(ctx, hostname, z.config().zfsBin, args...); err != nil {
 		// Idempotent: a retried Provision may find its own prior dataset. PV
 		// names are unique (pvc-<uuid>), so a pre-existing dataset is never a
 		// foreign collision — the desired end-state is already met.
@@ -122,13 +128,10 @@ func (z *zfsImpl) DestroyDataset(dataset *Dataset, flag DestroyFlag) error {
 	if flag != DestroyRecursively {
 		return fmt.Errorf("programmer error: flag not implemented: %d", flag)
 	}
-	if err := z.ensure(); err != nil {
-		return err
-	}
 	ctx, cancel := opCtx()
 	defer cancel()
 
-	if _, err := z.pool.run(ctx, dataset.Hostname, z.cfg.zfsBin, "destroy", "-r", dataset.Name); err != nil {
+	if _, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "destroy", "-r", dataset.Name); err != nil {
 		// Idempotent: if the dataset is already gone, the desired end-state is met.
 		if z.exists(ctx, dataset.Name, dataset.Hostname) {
 			return err
@@ -145,14 +148,12 @@ func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
 	if dataset.Mountpoint == "" {
 		return fmt.Errorf("undefined mountpoint for dataset: %s", dataset.Name)
 	}
-	if err := z.ensure(); err != nil {
-		return err
-	}
 	ctx, cancel := opCtx()
 	defer cancel()
 
 	// chmod g+w on the ZFS host (replaces docker/update-permissions.sh).
-	if _, err := z.pool.run(ctx, dataset.Hostname, z.cfg.chownBin, z.cfg.chmodArg, dataset.Mountpoint); err != nil {
+	cfg := z.config()
+	if _, err := z.run(ctx, dataset.Hostname, cfg.chownBin, cfg.chmodArg, dataset.Mountpoint); err != nil {
 		return fmt.Errorf("could not update permissions on '%s': %w", dataset.Hostname, err)
 	}
 	return nil

@@ -61,7 +61,7 @@ func (suite *ProvisionTestSuit) TearDownSuite() {
 	for _, dataset := range suite.createdDatasets {
 		err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
 			Name:     *parentDataset + "/" + dataset,
-			Hostname: "host",
+			Hostname: "localhost",
 		}, zfs.DestroyRecursively)
 		require.NoError(suite.T(), err)
 	}

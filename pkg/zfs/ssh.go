@@ -29,6 +29,7 @@ type sshConfig struct {
 	knownHosts string
 	strict     bool
 	requireTTY bool
+	forceLocal bool // ZFS_EXEC_LOCAL=true: run zfs locally, never over SSH
 
 	// sshCfg is the parsed ssh_config(5) mounted at <mountPath>/config, kept for
 	// backward compatibility so existing per-host `User`/`Port` settings still
@@ -52,6 +53,7 @@ func loadSSHConfig() sshConfig {
 		knownHosts: env("ZFS_SSH_KNOWN_HOSTS", filepath.Join(mount, "known_hosts")),
 		strict:     env("ZFS_SSH_STRICT_HOST_KEY", "true") != "false",
 		requireTTY: os.Getenv("ZFS_SSH_REQUIRETTY") == "true",
+		forceLocal: os.Getenv("ZFS_EXEC_LOCAL") == "true",
 		zfsBin:     strings.Fields(env("ZFS_BIN", "sudo -H zfs")),
 		chownBin:   strings.Fields(env("ZFS_CHOWN_BIN", "sudo -H chmod")),
 		chmodArg:   env("ZFS_MOD", "g+w"),
