@@ -39,6 +39,10 @@ type (
 		poolOnce sync.Once
 		pool     *sshPool
 		poolErr  error
+
+		// runFn issues a command; nil means the default local/SSH dispatch. It
+		// exists so the idempotency logic can be unit-tested with a fake runner.
+		runFn func(ctx context.Context, host string, binPrefix []string, args ...string) ([]byte, error)
 	}
 )
 
@@ -59,6 +63,9 @@ func (z *zfsImpl) config() sshConfig {
 // host. The SSH pool is built lazily on first remote use, so a purely local
 // deployment never needs SSH key material.
 func (z *zfsImpl) run(ctx context.Context, host string, binPrefix []string, args ...string) ([]byte, error) {
+	if z.runFn != nil {
+		return z.runFn(ctx, host, binPrefix, args...)
+	}
 	cfg := z.config()
 	if cfg.isLocalHost(host) {
 		return runLocal(ctx, binPrefix, args...)
@@ -68,6 +75,18 @@ func (z *zfsImpl) run(ctx context.Context, host string, binPrefix []string, args
 		return nil, z.poolErr
 	}
 	return z.pool.run(ctx, host, binPrefix, args...)
+}
+
+// presence reports whether a dataset exists. determinable is false when the
+// check itself failed (e.g. the host is unreachable), so callers must not treat
+// "not present" as "confirmed absent" unless determinable is true.
+func (z *zfsImpl) presence(ctx context.Context, name, hostname string) (present, determinable bool) {
+	if _, err := z.run(ctx, hostname, z.config().zfsBin, "list", "-H", "-o", "name", name); err == nil {
+		return true, true
+	} else if strings.Contains(err.Error(), "does not exist") {
+		return false, true // ZFS confirmed the dataset is gone
+	}
+	return false, false // could not determine (transport error, permissions, ...)
 }
 
 func opCtx() (context.Context, context.CancelFunc) {
@@ -93,11 +112,6 @@ func (z *zfsImpl) getDataset(ctx context.Context, name, hostname string) (*Datas
 	return &Dataset{Name: fields[0], Mountpoint: fields[1], Hostname: hostname}, nil
 }
 
-func (z *zfsImpl) exists(ctx context.Context, name, hostname string) bool {
-	_, err := z.run(ctx, hostname, z.config().zfsBin, "list", "-H", "-o", "name", name)
-	return err == nil
-}
-
 func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[string]string) (*Dataset, error) {
 	ctx, cancel := opCtx()
 	defer cancel()
@@ -112,8 +126,10 @@ func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[str
 	if _, err := z.run(ctx, hostname, z.config().zfsBin, args...); err != nil {
 		// Idempotent: a retried Provision may find its own prior dataset. PV
 		// names are unique (pvc-<uuid>), so a pre-existing dataset is never a
-		// foreign collision — the desired end-state is already met.
-		if !z.exists(ctx, name, hostname) {
+		// foreign collision — the desired end-state is already met. Only
+		// converge when the dataset is confirmed present; otherwise surface the
+		// original create error.
+		if present, _ := z.presence(ctx, name, hostname); !present {
 			return nil, err
 		}
 		klog.V(3).InfoS("dataset already exists, treating create as idempotent", "name", name, "host", hostname)
@@ -132,8 +148,11 @@ func (z *zfsImpl) DestroyDataset(dataset *Dataset, flag DestroyFlag) error {
 	defer cancel()
 
 	if _, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "destroy", "-r", dataset.Name); err != nil {
-		// Idempotent: if the dataset is already gone, the desired end-state is met.
-		if z.exists(ctx, dataset.Name, dataset.Hostname) {
+		// Idempotent, but only when the dataset is *confirmed* absent. If we
+		// cannot determine its state (e.g. the host is unreachable), surface the
+		// error rather than reporting a phantom successful deletion.
+		present, determinable := z.presence(ctx, dataset.Name, dataset.Hostname)
+		if present || !determinable {
 			return err
 		}
 		klog.V(3).InfoS("dataset already absent, treating destroy as idempotent", "name", dataset.Name, "host", dataset.Hostname)
