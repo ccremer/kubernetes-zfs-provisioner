@@ -137,7 +137,9 @@ func assertZfsReservation(t *testing.T, datasetName string, reserve bool) {
 // suite runs on a host with a local ZFS pool, so this reads it directly rather
 // than through the provisioner's SSH path.
 func zfsProperty(t *testing.T, dataset, property string) string {
-	out, err := exec.Command("zfs", "get", "-Hp", "-o", "value", property, dataset).Output()
+	// No -p: report human-readable values so an unset refreservation reads as
+	// "none" rather than the parseable "0".
+	out, err := exec.Command("zfs", "get", "-H", "-o", "value", property, dataset).Output()
 	require.NoError(t, err)
 	return strings.TrimSpace(string(out))
 }
