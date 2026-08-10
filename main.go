@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/sig-storage-lib-external-provisioner/v10/controller"
+	"sigs.k8s.io/sig-storage-lib-external-provisioner/v11/controller"
 )
 
 const (
@@ -64,8 +64,9 @@ func main() {
 		http.Redirect(w, r, "/metrics", http.StatusMovedPermanently)
 	})
 
+	ctx := klog.NewContext(context.Background(), log)
 	pc := controller.NewProvisionController(
-		log,
+		ctx,
 		clientset,
 		settings.ProvisionerInstance,
 		p,
@@ -74,7 +75,7 @@ func main() {
 	)
 
 	log.Info("Starting provisioner", "version", version, "commit", commit)
-	pc.Run(context.Background())
+	pc.Run(ctx)
 }
 
 func loadEnvironmentVariables() {
