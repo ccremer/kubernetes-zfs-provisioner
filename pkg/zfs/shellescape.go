@@ -4,12 +4,12 @@ import "strings"
 
 // shellQuote returns s quoted so a POSIX shell (sh/dash/bash/ksh) receives it as
 // a single argument, regardless of spaces or metacharacters. Safe, common
-// characters are returned unquoted; everything else is wrapped in single quotes
-// with embedded single quotes escaped as '\”.
+// characters are returned unquoted; everything else is single-quoted, and any
+// embedded single quote is escaped so the quoting cannot be broken out of.
 //
-// This replaces the previous approach of letting the remote login shell re-split
-// a flattened command string (see docker/zfs.sh), which broke arguments that
-// legitimately contain spaces, e.g. a multi-network sharenfs "rw=@a ro=@b".
+// Quoting the arguments here means the remote login shell cannot re-split them,
+// so a value that legitimately contains spaces (a multi-network sharenfs such as
+// "rw=@a ro=@b") survives intact.
 func shellQuote(s string) string {
 	if s == "" {
 		return "''"
@@ -20,12 +20,16 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
+// isShellSafe reports whether s consists only of characters that a POSIX shell
+// leaves untouched, so it can be passed without quoting.
 func isShellSafe(s string) bool {
+	const unquotedPunct = "@%_+=:,./-"
 	for _, r := range s {
-		switch {
-		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
-		case strings.ContainsRune("@%_+=:,./-", r):
-		default:
+		safe := (r >= 'a' && r <= 'z') ||
+			(r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') ||
+			strings.ContainsRune(unquotedPunct, r)
+		if !safe {
 			return false
 		}
 	}

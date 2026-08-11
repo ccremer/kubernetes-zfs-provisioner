@@ -126,7 +126,7 @@ func (z *zfsImpl) CreateDataset(name string, hostname string, properties map[str
 	if _, err := z.run(ctx, hostname, z.config().zfsBin, args...); err != nil {
 		// Idempotent: a retried Provision may find its own prior dataset. PV
 		// names are unique (pvc-<uuid>), so a pre-existing dataset is never a
-		// foreign collision — the desired end-state is already met. Only
+		// foreign collision; the desired end-state is already met. Only
 		// converge when the dataset is confirmed present; otherwise surface the
 		// original create error.
 		if present, _ := z.presence(ctx, name, hostname); !present {

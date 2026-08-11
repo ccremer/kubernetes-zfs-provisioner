@@ -3,6 +3,7 @@ package zfs
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -27,7 +28,7 @@ type sshConfig struct {
 	keyFile    string
 	passphrase string
 	knownHosts string
-	strict     bool
+	tofu       bool // ZFS_SSH_HOSTKEY_TOFU=true: pin unknown host keys on first use
 	requireTTY bool
 	forceLocal bool // ZFS_EXEC_LOCAL=true: run zfs locally, never over SSH
 
@@ -51,7 +52,7 @@ func loadSSHConfig() sshConfig {
 		keyFile:    os.Getenv("ZFS_SSH_KEY"),
 		passphrase: os.Getenv("ZFS_SSH_KEY_PASSPHRASE"),
 		knownHosts: env("ZFS_SSH_KNOWN_HOSTS", filepath.Join(mount, "known_hosts")),
-		strict:     env("ZFS_SSH_STRICT_HOST_KEY", "true") != "false",
+		tofu:       os.Getenv("ZFS_SSH_HOSTKEY_TOFU") == "true",
 		requireTTY: os.Getenv("ZFS_SSH_REQUIRETTY") == "true",
 		forceLocal: os.Getenv("ZFS_EXEC_LOCAL") == "true",
 		zfsBin:     strings.Fields(env("ZFS_BIN", "sudo -H zfs")),
@@ -155,37 +156,57 @@ func discoverKey(dir string) (string, error) {
 			return p, nil
 		}
 	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return "", fmt.Errorf("no ZFS_SSH_KEY set and cannot read %s: %w", dir, err)
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		p := filepath.Join(dir, e.Name())
-		if b, err := os.ReadFile(p); err == nil {
-			if _, err := ssh.ParsePrivateKey(b); err == nil {
-				return p, nil
-			}
-		}
-	}
-	return "", fmt.Errorf("no usable private key found in %s (set ZFS_SSH_KEY)", dir)
+	return "", fmt.Errorf("no SSH key found in %s under a standard name (id_ed25519, id_ecdsa, id_rsa); set ZFS_SSH_KEY to use another path", dir)
 }
 
+// hostKeyCallback verifies remote host keys against the mounted known_hosts.
+// A key that does not match a recorded one is always rejected (possible MITM).
+// When ZFS_SSH_HOSTKEY_TOFU=true, a host that is not yet recorded is pinned on
+// first use and appended to known_hosts: the native equivalent of ssh-keyscan,
+// so no external tooling is needed.
 func hostKeyCallback(cfg sshConfig) (ssh.HostKeyCallback, error) {
-	if !cfg.strict {
-		klog.Warning("ZFS_SSH_STRICT_HOST_KEY=false: host keys are NOT verified")
-		return ssh.InsecureIgnoreHostKey(), nil
+	var verify ssh.HostKeyCallback
+	if _, err := os.Stat(cfg.knownHosts); err == nil {
+		if verify, err = knownhosts.New(cfg.knownHosts); err != nil {
+			return nil, fmt.Errorf("parse known_hosts %s: %w", cfg.knownHosts, err)
+		}
+	} else if !cfg.tofu {
+		return nil, fmt.Errorf("known_hosts %s not found; provide it, or set ZFS_SSH_HOSTKEY_TOFU=true to pin host keys on first use: %w", cfg.knownHosts, err)
 	}
-	if _, err := os.Stat(cfg.knownHosts); err != nil {
-		return nil, fmt.Errorf("known_hosts %s not found (set ZFS_SSH_KNOWN_HOSTS or ZFS_SSH_STRICT_HOST_KEY=false): %w", cfg.knownHosts, err)
+
+	if !cfg.tofu {
+		return verify, nil
 	}
-	cb, err := knownhosts.New(cfg.knownHosts)
+
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		if verify != nil {
+			err := verify(hostname, remote, key)
+			if err == nil {
+				return nil
+			}
+			var ke *knownhosts.KeyError
+			if errors.As(err, &ke) && len(ke.Want) > 0 {
+				return err // host is known but presented a different key
+			}
+		}
+		recordHostKey(cfg.knownHosts, hostname, key)
+		return nil
+	}, nil
+}
+
+// recordHostKey pins a previously unseen host key by appending it to known_hosts
+// in the standard format. If the file is not writable (e.g. a read-only mount)
+// the line is logged so it can be added by hand.
+func recordHostKey(path, hostname string, key ssh.PublicKey) {
+	line := strings.TrimSpace(knownhosts.Line([]string{knownhosts.Normalize(hostname)}, key))
+	klog.Warningf("pinning new host key (TOFU) for %s: %s", hostname, line)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
-		return nil, fmt.Errorf("parse known_hosts %s: %w", cfg.knownHosts, err)
+		klog.Warningf("could not persist host key to %s; add the line above manually: %v", path, err)
+		return
 	}
-	return cb, nil
+	defer f.Close()
+	_, _ = f.WriteString(line + "\n")
 }
 
 func (p *sshPool) client(host string) (*ssh.Client, error) {

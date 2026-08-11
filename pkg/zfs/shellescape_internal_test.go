@@ -25,8 +25,8 @@ func TestShellQuote(t *testing.T) {
 }
 
 // TestShellQuoteRoundTrip proves that whatever we quote reaches a real POSIX
-// shell as exactly one argument, byte-for-byte — the property the previous
-// flattened-command wrappers lacked.
+// shell as exactly one argument, byte-for-byte, no matter which metacharacters
+// it contains.
 func TestShellQuoteRoundTrip(t *testing.T) {
 	t.Parallel()
 
@@ -34,7 +34,7 @@ func TestShellQuoteRoundTrip(t *testing.T) {
 		"plain",
 		"rw=@10.0.0.0/8 ro=@192.168.0.0/16",
 		"two words",
-		"semi;colon && rm -rf /",
+		"semi;colon && echo rm",
 		"$(id) `whoami`",
 		"tab\there",
 		"quote'inside",
