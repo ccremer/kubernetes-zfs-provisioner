@@ -27,7 +27,7 @@ Document your changes in values.yaml and let `make docs:helm` generate this sect
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
-| env | object | `{}` | A dict with KEY: VALUE pairs |
+| env | object | `{}` | A dict with KEY: VALUE pairs passed to the provisioner as environment variables. Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`. See the [chart README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list. |
 | fullnameOverride | string | `""` |  |
 | hostAliases | object | `{}` | A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts. See [values.yaml](./values.yaml) for an example. |
 | image.pullPolicy | string | `"Always"` |  |
@@ -51,7 +51,7 @@ Document your changes in values.yaml and let `make docs:helm` generate this sect
 | ssh.config | string | `""` | **Required.** ssh_config(5)-compatible file content to configure SSH options when connecting |
 | ssh.externalSecretName | string | `""` | If SSH secrets are managed externally, specify the name |
 | ssh.identities | object | `{}` | **Required.** Provide a private key for each SSH identity. See [values.yaml](./values.yaml) for an example |
-| ssh.knownHosts | list | `[]` | **Required.** List of {host, pubKey} dicts where the public key of each host is configured |
+| ssh.knownHosts | list | `[]` | **Required** unless `env.ZFS_SSH_HOSTKEY_TOFU` is `"true"`. List of {host, pubKey} dicts with the public key of each ZFS host. Host keys are verified strictly by default; set `env.ZFS_SSH_HOSTKEY_TOFU: "true"` to pin unknown host keys on first use instead. |
 | ssh.mountPath | string | `"/home/zfs/.ssh"` | The path where the SSH config and identities are mounted |
 | storageClass.classes | list | `[]` | Storage classes to create. See [values.yaml](values.yaml) for an example. |
 | storageClass.create | bool | `false` | Whether to create storage classes for this provisioner. |
@@ -76,3 +76,4 @@ No 1.x or 0.x chart releases will be migrated from the `ccremer/charts` Helm rep
 * The `image.registry` has changed from `quay.io` to `ghcr.io`.
 * The `image.tag` has changed from to `v1.1.0` to `v1`.
 * The `image.pullPolicy` has changed from `IfNotPresent` to `Always`.
+

@@ -68,12 +68,16 @@ ssh:
 #     ...
 #     -----END OPENSSH PRIVATE KEY-----
 
-  # -- **Required.** List of {host, pubKey} dicts where the public key of each host is configured
+  # -- **Required** unless `env.ZFS_SSH_HOSTKEY_TOFU` is `"true"`. List of {host, pubKey} dicts
+  # with the public key of each ZFS host. Host keys are verified strictly by default; set
+  # `env.ZFS_SSH_HOSTKEY_TOFU: "true"` to pin unknown host keys on first use instead.
   knownHosts: []
 #   - host: my-host
 #     pubKey: ssh-ed25519 AAAAC3NzaC...
 
-# -- A dict with KEY: VALUE pairs
+# -- A dict with KEY: VALUE pairs passed to the provisioner as environment variables.
+# Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`.
+# See the [chart README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list.
 env: {}
 
 # -- A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts.
