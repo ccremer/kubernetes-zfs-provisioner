@@ -77,7 +77,7 @@ ssh:
 
 # -- A dict with KEY: VALUE pairs passed to the provisioner as environment variables.
 # Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`.
-# See the [chart README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list.
+# See the [provisioner README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list.
 env: {}
 
 # -- A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts.
