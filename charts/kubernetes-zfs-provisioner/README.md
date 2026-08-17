@@ -27,7 +27,7 @@ Document your changes in values.yaml and let `make docs:helm` generate this sect
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
-| env | object | `{}` | A dict with KEY: VALUE pairs passed to the provisioner as environment variables. Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`. See the [chart README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list. |
+| env | object | `{}` | A dict with KEY: VALUE pairs passed to the provisioner as environment variables. Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`. See the [provisioner README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list. |
 | fullnameOverride | string | `""` |  |
 | hostAliases | object | `{}` | A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts. See [values.yaml](./values.yaml) for an example. |
 | image.pullPolicy | string | `"Always"` |  |
