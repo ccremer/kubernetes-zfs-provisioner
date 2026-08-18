@@ -2,16 +2,25 @@ package provisioner
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
 const (
-	ParentDatasetParameter   = "parentDataset"
-	SharePropertiesParameter = "shareProperties"
-	HostnameParameter        = "hostname"
-	TypeParameter            = "type"
-	NodeNameParameter        = "node"
-	ReserveSpaceParameter    = "reserveSpace"
+	ParentDatasetParameter    = "parentDataset"
+	SharePropertiesParameter  = "shareProperties"
+	HostnameParameter         = "hostname"
+	TypeParameter             = "type"
+	NodeNameParameter         = "node"
+	ReserveSpaceParameter     = "reserveSpace"
+	DestroySnapshotsParameter = "destroySnapshots"
+)
+
+var (
+	// ZFS dataset components: letters, digits, and a small set of punctuation.
+	// Rejects "..", shell metacharacters and leading/trailing slashes (checked separately).
+	datasetNameRe = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.:-]*(/[A-Za-z0-9_.:-]+)*$`)
+	hostnameRe    = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]*$`)
 )
 
 // StorageClass Parameters are expected in the following schema:
@@ -47,6 +56,10 @@ type (
 		// HostPathNodeName overrides the hostname if the Kubernetes node name is different than the ZFS target host. Used for Affinity
 		HostPathNodeName string
 		ReserveSpace     bool
+		// DestroySnapshots, when true (the default, matching historic destroy -r),
+		// allows Delete to recursively remove user snapshots. Set false to refuse
+		// deletion while snapshots exist.
+		DestroySnapshots bool
 	}
 )
 
@@ -63,6 +76,13 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 	if strings.HasPrefix(parentDataset, "/") || strings.HasSuffix(parentDataset, "/") {
 		return nil, fmt.Errorf("%s must not begin or end with '/': %s", ParentDatasetParameter, parentDataset)
 	}
+	if strings.Contains(parentDataset, "..") || !datasetNameRe.MatchString(parentDataset) {
+		return nil, fmt.Errorf("%s contains invalid characters: %s", ParentDatasetParameter, parentDataset)
+	}
+	hostname := parameters[HostnameParameter]
+	if !hostnameRe.MatchString(hostname) {
+		return nil, fmt.Errorf("%s contains invalid characters: %s", HostnameParameter, hostname)
+	}
 
 	reserveSpaceValue, reserveSpaceValuePresent := parameters[ReserveSpaceParameter]
 	var reserveSpace bool
@@ -74,10 +94,16 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 		return nil, fmt.Errorf("invalid '%s' parameter value: %s", ReserveSpaceParameter, parameters[ReserveSpaceParameter])
 	}
 
+	destroySnaps, err := parseBoolParam(parameters, DestroySnapshotsParameter, true)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &ZFSStorageClassParameters{
-		ParentDataset: parentDataset,
-		Hostname:      parameters[HostnameParameter],
-		ReserveSpace:  reserveSpace,
+		ParentDataset:    parentDataset,
+		Hostname:         hostname,
+		ReserveSpace:     reserveSpace,
+		DestroySnapshots: destroySnaps,
 	}
 	typeParam := parameters[TypeParameter]
 	switch typeParam {
@@ -104,4 +130,18 @@ func NewStorageClassParameters(parameters map[string]string) (*ZFSStorageClassPa
 	}
 
 	return p, nil
+}
+
+func parseBoolParam(parameters map[string]string, key string, defaultVal bool) (bool, error) {
+	v, ok := parameters[key]
+	if !ok || v == "" {
+		return defaultVal, nil
+	}
+	if strings.EqualFold(v, "true") {
+		return true, nil
+	}
+	if strings.EqualFold(v, "false") {
+		return false, nil
+	}
+	return false, fmt.Errorf("invalid '%s' parameter value: %s", key, v)
 }
