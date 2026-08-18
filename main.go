@@ -79,6 +79,23 @@ func main() {
 		controller.MetricsPort(int32(settings.MetricsPort)),
 	)
 
+	// Probe listener is independent of leader election. The library only
+	// binds :8080 after it wins the lease; standby replicas must still be Ready.
+	go func() {
+		mux := http.NewServeMux()
+		ok := func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+		}
+		mux.HandleFunc("/healthz", ok)
+		mux.HandleFunc("/readyz", ok)
+		addr := fmt.Sprintf("%s:%d", settings.MetricsAddr, settings.MetricsPort+1)
+		log.Info("starting healthz", "addr", addr)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			klog.ErrorS(err, "healthz server exited")
+		}
+	}()
+
 	// The expander writes to the backend (zfs set refquota/refreservation) and to
 	// PV/PVC objects, so exactly one replica may run it - just like Provision and
 	// Delete, which the library already guards with leader election. The library

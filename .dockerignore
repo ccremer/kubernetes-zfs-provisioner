@@ -2,3 +2,4 @@
 *
 !kubernetes-zfs-provisioner
 !docker/*
+!e2e/mock-zfs.sh
