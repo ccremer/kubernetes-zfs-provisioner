@@ -115,6 +115,22 @@ type sshPool struct {
 
 	mu      sync.Mutex
 	clients map[string]*ssh.Client
+	hostMu  map[string]*sync.Mutex
+}
+
+func (p *sshPool) lockHost(host string) func() {
+	p.mu.Lock()
+	if p.hostMu == nil {
+		p.hostMu = map[string]*sync.Mutex{}
+	}
+	m, ok := p.hostMu[host]
+	if !ok {
+		m = &sync.Mutex{}
+		p.hostMu[host] = m
+	}
+	p.mu.Unlock()
+	m.Lock()
+	return m.Unlock
 }
 
 func newSSHPool(cfg sshConfig) (*sshPool, error) {
@@ -210,15 +226,21 @@ func recordHostKey(path, hostname string, key ssh.PublicKey) {
 }
 
 func (p *sshPool) client(host string) (*ssh.Client, error) {
+	unlock := p.lockHost(host)
+	defer unlock()
+
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	if c, ok := p.clients[host]; ok {
+	c, ok := p.clients[host]
+	p.mu.Unlock()
+	if ok {
 		// Cheap liveness check; re-dial if the connection went away.
 		if _, _, err := c.SendRequest("keepalive@openssh.com", true, nil); err == nil {
 			return c, nil
 		}
 		_ = c.Close()
+		p.mu.Lock()
 		delete(p.clients, host)
+		p.mu.Unlock()
 	}
 	cfg := &ssh.ClientConfig{
 		User:            p.cfg.userFor(host),
@@ -228,9 +250,11 @@ func (p *sshPool) client(host string) (*ssh.Client, error) {
 	}
 	c, err := ssh.Dial("tcp", net.JoinHostPort(host, p.cfg.portFor(host)), cfg)
 	if err != nil {
-		return nil, fmt.Errorf("ssh dial %s: %w", host, err)
+		return nil, &RunError{Op: "ssh dial " + host, Host: host, Err: err, Ran: false}
 	}
+	p.mu.Lock()
 	p.clients[host] = c
+	p.mu.Unlock()
 	return c, nil
 }
 
@@ -275,7 +299,21 @@ func (p *sshPool) run(ctx context.Context, host string, binPrefix []string, args
 	case err = <-done:
 	}
 	if err != nil {
-		return stdout.Bytes(), fmt.Errorf("remote %q on %s: %w: %s", cmd, host, err, strings.TrimSpace(stderr.String()))
+		re := &RunError{
+			Op:     "remote " + cmd,
+			Host:   host,
+			Err:    err,
+			Stderr: strings.TrimSpace(stderr.String()),
+			Exit:   -1,
+			Ran:    true,
+		}
+		var ee *ssh.ExitError
+		if errors.As(err, &ee) {
+			re.Exit = ee.ExitStatus()
+		} else if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			re.Ran = false
+		}
+		return stdout.Bytes(), re
 	}
 	return stdout.Bytes(), nil
 }
