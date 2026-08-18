@@ -8,9 +8,14 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/sig-storage-lib-external-provisioner/v13/controller"
 )
 
@@ -74,8 +79,58 @@ func main() {
 		controller.MetricsPort(int32(settings.MetricsPort)),
 	)
 
+	// The expander writes to the backend (zfs set refquota/refreservation) and to
+	// PV/PVC objects, so exactly one replica may run it - just like Provision and
+	// Delete, which the library already guards with leader election. The library
+	// does not expose its leadership, so the expander holds its own lease.
+	go runExpander(ctx, clientset, p, log)
+
 	log.Info("Starting provisioner", "version", version, "commit", commit)
 	pc.Run(ctx)
+}
+
+// runExpander runs the volume expander under a dedicated lease so that only the
+// leader among the replicas performs expansion. Outside a cluster (no namespace
+// to hold the lease) it runs unguarded, which is fine for a single dev process.
+func runExpander(ctx context.Context, clientset kubernetes.Interface, p *provisioner.ZFSProvisioner, log klog.Logger) {
+	ns := expanderNamespace()
+	if ns == "" {
+		log.Info("no namespace for expander leader election; running the expander without a lease")
+		provisioner.RunExpander(ctx, clientset, p, log)
+		return
+	}
+	identity, _ := os.Hostname()
+	if identity == "" {
+		identity = "zfs-provisioner"
+	}
+	lock := &resourcelock.LeaseLock{
+		LeaseMeta:  metav1.ObjectMeta{Name: "zfs-provisioner-expander", Namespace: ns},
+		Client:     clientset.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{Identity: identity},
+	}
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
+		Lock:            lock,
+		ReleaseOnCancel: true,
+		LeaseDuration:   15 * time.Second,
+		RenewDeadline:   10 * time.Second,
+		RetryPeriod:     2 * time.Second,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) { provisioner.RunExpander(ctx, clientset, p, log) },
+			OnStoppedLeading: func() { log.Info("expander lost leadership; standing by") },
+		},
+	})
+}
+
+// expanderNamespace is the namespace the expander lease lives in: the pod's own
+// namespace, from the downward-API env var or the service-account mount.
+func expanderNamespace() string {
+	if ns := strings.TrimSpace(os.Getenv("POD_NAMESPACE")); ns != "" {
+		return ns
+	}
+	if b, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		return strings.TrimSpace(string(b))
+	}
+	return ""
 }
 
 func loadEnvironmentVariables() {
