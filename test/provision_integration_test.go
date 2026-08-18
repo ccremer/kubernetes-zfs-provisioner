@@ -6,14 +6,14 @@ import (
 	"bufio"
 	"context"
 	"flag"
-	"k8s.io/klog/v2"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"testing"
 
-	gozfs "github.com/mistifyio/go-zfs/v3"
+	"k8s.io/klog/v2"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,7 +61,7 @@ func (suite *ProvisionTestSuit) TearDownSuite() {
 	for _, dataset := range suite.createdDatasets {
 		err := zfs.NewInterface().DestroyDataset(&zfs.Dataset{
 			Name:     *parentDataset + "/" + dataset,
-			Hostname: "host",
+			Hostname: "localhost",
 		}, zfs.DestroyRecursively)
 		require.NoError(suite.T(), err)
 	}
@@ -123,20 +123,25 @@ func provisionDataset(suite *ProvisionTestSuit, name string, parameters map[stri
 }
 
 func assertZfsReservation(t *testing.T, datasetName string, reserve bool) {
-	dataset, err := gozfs.GetDataset(datasetName)
-	assert.NoError(t, err)
-
-	refreserved, err := dataset.GetProperty("refreservation")
-	assert.NoError(t, err)
-
-	refquota, err := dataset.GetProperty("refquota")
-	assert.NoError(t, err)
+	refreserved := zfsProperty(t, datasetName, "refreservation")
+	refquota := zfsProperty(t, datasetName, "refquota")
 
 	if reserve {
 		assert.Equal(t, refquota, refreserved)
 	} else {
 		assert.Equal(t, "none", refreserved)
 	}
+}
+
+// zfsProperty reads a single ZFS property from the local pool. The integration
+// suite runs on a host with a local ZFS pool, so this reads it directly rather
+// than through the provisioner's SSH path.
+func zfsProperty(t *testing.T, dataset, property string) string {
+	// No -p: report human-readable values so an unset refreservation reads as
+	// "none" rather than the parseable "0".
+	out, err := exec.Command("zfs", "get", "-H", "-o", "value", property, dataset).Output()
+	require.NoError(t, err)
+	return strings.TrimSpace(string(out))
 }
 
 func assertNfsExport(t *testing.T, fullDataset string) {

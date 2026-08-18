@@ -58,6 +58,52 @@ The provisioner instance name is also stored as a ZFS user property in the creat
 dataset of the form `io.kubernetes.pv.zfs:managed_by` for system administrators, but is not
 further significant to the provisioner.
 
+### SSH connection
+
+The provisioner reaches each ZFS host over SSH using a native SSH client, so no
+`ssh` or `sshpass` binaries are needed in the image. Connections use
+**public-key authentication only** — a password is never attempted. The private
+key is read from `ZFS_SSH_KEY`, or, if that is unset, the first of `id_ed25519`,
+`id_ecdsa` or `id_rsa` found in the SSH mount path.
+
+#### Host-key verification
+
+The key presented by a host is checked against the mounted `known_hosts` file
+(populated from `ssh.knownHosts` in the Helm chart):
+
+- **Strict (default).** The presented key must match a recorded entry. A host
+  that offers a key different from the recorded one is always rejected as a
+  possible man-in-the-middle. If `known_hosts` is missing, the provisioner
+  refuses to start rather than connect blindly.
+- **Trust on first use (opt-in).** Set `ZFS_SSH_HOSTKEY_TOFU=true` to pin the
+  key of a not-yet-recorded host on first contact and append it to
+  `known_hosts` — the built-in equivalent of `ssh-keyscan`, so no extra tooling
+  is required. A host that is already recorded but later presents a different
+  key is still rejected. If the `known_hosts` file is not writable (for example
+  a read-only mount) the key line is logged so it can be added by hand.
+
+Because TOFU trusts whichever host answers first, prefer pre-seeding
+`ssh.knownHosts` whenever the host identities are known in advance.
+
+#### SSH environment variables
+
+| Variable | Description | Default |
+| :------: | :---------- | :-----: |
+| `ZFS_SSH_KEY` | Path to the SSH private key. | first of `id_ed25519`, `id_ecdsa`, `id_rsa` in the mount path |
+| `ZFS_SSH_KEY_PASSPHRASE` | Passphrase for an encrypted private key. | `` (key is unencrypted) |
+| `ZFS_SSH_KNOWN_HOSTS` | Path to the `known_hosts` file. | `<mount path>/known_hosts` |
+| `ZFS_SSH_HOSTKEY_TOFU` | `true` pins unknown host keys on first use (see above). | `false` (strict) |
+| `ZFS_SSH_USER` | SSH user, overriding any `ssh_config` value. | `ssh_config` `User`, else `root` |
+| `ZFS_SSH_PORT` | SSH port, overriding any `ssh_config` value. | `ssh_config` `Port`, else `22` |
+| `ZFS_SSH_MOUNT_PATH` | Directory holding the key, `known_hosts` and optional `config`. | `/home/zfs/.ssh` |
+| `ZFS_SSH_REQUIRETTY` | `true` requests a PTY, for hosts whose `sudo` needs one. | `false` |
+| `ZFS_EXEC_LOCAL` | `true` runs `zfs` on the provisioner host itself instead of over SSH. | `false` |
+| `ZFS_BIN` | Command prefix for ZFS calls. | `sudo -H zfs` |
+| `ZFS_CHOWN_BIN` | Command prefix used to relax permissions on a dataset mountpoint. | `sudo -H chmod` |
+| `ZFS_MOD` | Mode argument passed to `ZFS_CHOWN_BIN`. | `g+w` |
+
+These are set through the chart's `env` value, e.g. `--set env.ZFS_SSH_HOSTKEY_TOFU=true`.
+
 ### Storage Classes
 
 The provisioner relies on properly configured storage classes. The following shows an example
@@ -151,9 +197,11 @@ in a container (see [zfs(8)][man zfs]).
 But most importantly: Mounting `/dev/zfs` inside the provisioner container would mean that
 the datasets will only be created on the same host as the container currently runs.
 
-So, in order to "break out" of the container the `zfs` calls are wrapped and redirected
-to another host over **SSH**. This requires SSH private keys to be mounted in the container
-for a SSH user with sufficient permissions to run `zfs` commands on the target host.
+So, in order to "break out" of the container the `zfs` calls are run on another host over
+**SSH** (see [SSH connection](#ssh-connection) for authentication and host-key handling).
+This requires an SSH private key to be mounted in the container for a SSH user with
+sufficient permissions to run `zfs` commands on the target host, and the host's key to be
+trusted through `known_hosts`.
 
 Example sudoers file in `/etc/sudoers.d/zfs-provisioner` (On the ZFS host):
 ```

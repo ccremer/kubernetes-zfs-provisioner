@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	gozfs "github.com/mistifyio/go-zfs/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	core "k8s.io/api/core/v1"
@@ -21,7 +20,7 @@ func TestDelete_GivenVolume_WhenAnnotationCorrect_ThenDeleteZfsDataset(t *testin
 		Hostname: expectedHost,
 	}
 	stub := new(zfsStub)
-	stub.On("DestroyDataset", dataset, zfs.DestroyFlag(gozfs.DestroyRecursive)).
+	stub.On("DestroyDataset", dataset, zfs.DestroyRecursively).
 		Return(nil)
 	p, _ := NewZFSProvisionerStub(stub)
 	pv := core.PersistentVolume{ObjectMeta: v1.ObjectMeta{Annotations: map[string]string{
