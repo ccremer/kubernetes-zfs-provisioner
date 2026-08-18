@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# -- Usually `1` is fine
+# -- 1 is enough (leader election). Use 2 for HA together with a PDB.
 replicaCount: 1
 
 image:
@@ -10,9 +10,9 @@ image:
   repository: ccremer/zfs-provisioner
   # -- Container image registry
   registry: ghcr.io
-  # -- Container image tag
+  # -- Pin a release tag in production. `v1` is a moving major tag.
   tag: v1
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 nameOverride: ""
@@ -44,6 +44,14 @@ storageClass:
     #   node: ""
     #   # -- Reserve space for created datasets. Default is true. Use false to enable thin provisioning
     #   reserveSpace: false
+    #   # -- If false, Delete refuses to run while user snapshots exist
+    #   destroySnapshots: true
+    #   allowVolumeExpansion: true
+    #   volumeBindingMode: Immediate
+    #   mountOptions:
+    #     - nfsvers=4.2
+    #     - proto=tcp
+    #     - hard
     #   # -- Annotations for the storage class
     #   # annotations:
     #   #   storageclass.kubernetes.io/is-default-class: "true"
@@ -53,12 +61,13 @@ ssh:
   externalSecretName: ""
   # -- The path where the SSH config and identities are mounted
   mountPath: "/home/zfs/.ssh"
-  # -- **Required.** ssh_config(5)-compatible file content to configure SSH options when connecting
+  # -- Optional ssh_config(5). Only `User` and `Port` are honoured by the native client.
+  # Per-host IdentityFile is not read; set `ZFS_SSH_KEY` or use a standard key name.
   config: ""
     # config: |
     #   Host my-host
-    #     IdentityFile ~/.ssh/id_ed25519
     #     User zfs
+    #     Port 22
 
   # -- **Required.** Provide a private key for each SSH identity.
   # See [values.yaml](./values.yaml) for an example
@@ -96,29 +105,42 @@ serviceAccount:
   name: ""
 
 rbac:
-  # -- **Required for first time deployments** Grant the service account
-  # the necessary permissions,
-  create: false
+  # -- Grant the service account the necessary cluster permissions.
+  create: true
 
 # -- If you encounter **issues with SSH, set `podSecurityContext.fsGroup=100`**, as the SSH
 # files might not be readable to the container user `zfs` with uid 100.
-podSecurityContext: {}
-  # fsGroup: 100
+podSecurityContext:
+  fsGroup: 100
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 100
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 100
 
 resources:
   limits:
-    memory: 40Mi
+    memory: 256Mi
   requests:
     cpu: 50m
-    memory: 20Mi
+    memory: 64Mi
+
+metrics:
+  port: 8080
+  service:
+    # -- Expose /metrics on a ClusterIP Service
+    enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# -- Optional PriorityClass for the provisioner pod
+priorityClassName: ""
 
 # -- Reminder: This has no effect on any PVs, but maybe you want the provisioner pod running
 # on certain nodes.
@@ -127,3 +149,8 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+# -- Extra volumes mounted into the provisioner container (e.g. local mock root)
+extraVolumes: []
+# -- Extra volume mounts for the provisioner container
+extraVolumeMounts: []

@@ -1,0 +1,17 @@
+{{- if .Values.metrics.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubernetes-zfs-provisioner.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubernetes-zfs-provisioner.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.metrics.port | default 8080 }}
+      targetPort: http
+{{- end }}

@@ -120,6 +120,8 @@ func Test_StorageClass_GivenClassesEnabled_WhenAdditionalParametersUndefined_The
 	var class v1.StorageClass
 	helm.UnmarshalK8SYaml(t, output, &class)
 
-	assert.Equal(t, "", class.Parameters["shareProperties"])
-	assert.Equal(t, "", class.Parameters["node"])
+	_, hasShare := class.Parameters["shareProperties"]
+	_, hasNode := class.Parameters["node"]
+	assert.False(t, hasShare, "empty shareProperties must be omitted")
+	assert.False(t, hasNode, "empty node must be omitted")
 }

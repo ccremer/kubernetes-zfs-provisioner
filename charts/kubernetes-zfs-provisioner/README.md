@@ -1,6 +1,6 @@
 # kubernetes-zfs-provisioner
 
-![Version: 2.3.0](https://img.shields.io/badge/Version-2.3.0-informational?style=flat-square)
+![Version: 2.4.0](https://img.shields.io/badge/Version-2.4.0-informational?style=flat-square)
 
 Dynamic ZFS persistent volume provisioner for Kubernetes
 

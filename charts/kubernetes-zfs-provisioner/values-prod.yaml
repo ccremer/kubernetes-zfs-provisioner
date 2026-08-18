@@ -1,0 +1,44 @@
+# Production overlay. Install with:
+#   helm install zfs ./charts/kubernetes-zfs-provisioner -f values-prod.yaml -f secrets.yaml
+#
+# secrets.yaml should only contain ssh.identities / ssh.knownHosts or set
+# ssh.externalSecretName to a Secret managed outside Helm.
+
+replicaCount: 2
+
+image:
+  pullPolicy: IfNotPresent
+
+rbac:
+  create: true
+
+env:
+  ZFS_SSH_HOSTKEY_TOFU: "false"
+
+ssh:
+  # Require a pre-seeded known_hosts. Do not enable TOFU in production.
+  externalSecretName: ""
+
+storageClass:
+  create: true
+  classes: []
+    # - name: zfs-nfs
+    #   hostName: nas-1.prod.example
+    #   parentDataset: tank/k8s
+    #   policy: Retain
+    #   type: nfs
+    #   shareProperties: "rw=@10.0.0.0/8,root_squash"
+    #   reserveSpace: true
+    #   destroySnapshots: false
+    #   allowVolumeExpansion: true
+    #   volumeBindingMode: Immediate
+    #   mountOptions:
+    #     - nfsvers=4.2
+    #     - proto=tcp
+    #     - hard
+    #     - timeo=600
+    #     - retrans=2
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

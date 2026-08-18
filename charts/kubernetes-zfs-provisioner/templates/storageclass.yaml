@@ -13,14 +13,27 @@ metadata:
 {{- end }}
 provisioner: {{ $.Values.provisioner.instance }}
 reclaimPolicy: {{ .policy | default "Delete" }}
+allowVolumeExpansion: {{ .allowVolumeExpansion | default true }}
+volumeBindingMode: {{ .volumeBindingMode | default "Immediate" }}
+{{- with .mountOptions }}
+mountOptions:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 parameters:
-  parentDataset: {{ .parentDataset }}
-  hostname: {{ .hostName }}
-  type: {{ .type | default "nfs" }}
-  node: {{ .node | default "''" }}
-  shareProperties: {{ .shareProperties | default "''" }}
+  parentDataset: {{ .parentDataset | quote }}
+  hostname: {{ .hostName | quote }}
+  type: {{ .type | default "nfs" | quote }}
+  {{- if .node }}
+  node: {{ .node | quote }}
+  {{- end }}
+  {{- if .shareProperties }}
+  shareProperties: {{ .shareProperties | quote }}
+  {{- end }}
   {{- if kindIs "bool" .reserveSpace }}
-  reserveSpace: {{ quote .reserveSpace }}
+  reserveSpace: {{ .reserveSpace | quote }}
+  {{- end }}
+  {{- if kindIs "bool" .destroySnapshots }}
+  destroySnapshots: {{ .destroySnapshots | quote }}
   {{- end }}
 {{- end }}
 {{- end }}
