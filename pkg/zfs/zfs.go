@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +20,9 @@ type (
 		CreateDataset(name string, hostname string, properties map[string]string) (*Dataset, error)
 		DestroyDataset(dataset *Dataset, flag DestroyFlag) error
 		SetPermissions(dataset *Dataset) error
+		SetProperty(dataset *Dataset, key, value string) error
+		GetProperty(name, hostname, key string) (string, error)
+		ListSnapshots(dataset *Dataset) ([]string, error)
 	}
 	// Dataset is a representation of a ZFS dataset
 	Dataset struct {
@@ -72,7 +77,7 @@ func (z *zfsImpl) run(ctx context.Context, host string, binPrefix []string, args
 	}
 	z.poolOnce.Do(func() { z.pool, z.poolErr = newSSHPool(cfg) })
 	if z.poolErr != nil {
-		return nil, z.poolErr
+		return nil, &RunError{Op: "ssh-pool", Host: host, Err: z.poolErr, Ran: false}
 	}
 	return z.pool.run(ctx, host, binPrefix, args...)
 }
@@ -83,14 +88,23 @@ func (z *zfsImpl) run(ctx context.Context, host string, binPrefix []string, args
 func (z *zfsImpl) presence(ctx context.Context, name, hostname string) (present, determinable bool) {
 	if _, err := z.run(ctx, hostname, z.config().zfsBin, "list", "-H", "-o", "name", name); err == nil {
 		return true, true
-	} else if strings.Contains(err.Error(), "does not exist") {
-		return false, true // ZFS confirmed the dataset is gone
+	} else if IsNotFound(err) {
+		return false, true
 	}
-	return false, false // could not determine (transport error, permissions, ...)
+	return false, false
+}
+
+func opTimeout() time.Duration {
+	if v := os.Getenv("ZFS_OP_TIMEOUT"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			return d
+		}
+	}
+	return 60 * time.Second
 }
 
 func opCtx() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 60*time.Second)
+	return context.WithTimeout(context.Background(), opTimeout())
 }
 
 func (z *zfsImpl) GetDataset(name string, hostname string) (*Dataset, error) {
@@ -147,6 +161,12 @@ func (z *zfsImpl) DestroyDataset(dataset *Dataset, flag DestroyFlag) error {
 	ctx, cancel := opCtx()
 	defer cancel()
 
+	// Drop the NFS export before destroy so clients get a clean unexport
+	// rather than ESTALE, and so destroy is less likely to see "dataset is busy".
+	if _, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "set", "sharenfs=off", dataset.Name); err != nil && !IsNotFound(err) {
+		klog.V(3).InfoS("unshare before destroy failed (continuing)", "dataset", dataset.Name, "err", err)
+	}
+
 	if _, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "destroy", "-r", dataset.Name); err != nil {
 		// Idempotent, but only when the dataset is *confirmed* absent. If we
 		// cannot determine its state (e.g. the host is unreachable), surface the
@@ -176,6 +196,68 @@ func (z *zfsImpl) SetPermissions(dataset *Dataset) error {
 		return fmt.Errorf("could not update permissions on '%s': %w", dataset.Hostname, err)
 	}
 	return nil
+}
+
+func (z *zfsImpl) SetProperty(dataset *Dataset, key, value string) error {
+	if err := validateDataset(dataset); err != nil {
+		return err
+	}
+	if key == "" {
+		return errors.New("empty zfs property name")
+	}
+	ctx, cancel := opCtx()
+	defer cancel()
+	_, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "set", key+"="+value, dataset.Name)
+	return err
+}
+
+func (z *zfsImpl) GetProperty(name, hostname, key string) (string, error) {
+	if name == "" || hostname == "" || key == "" {
+		return "", errors.New("name, hostname and property key are required")
+	}
+	ctx, cancel := opCtx()
+	defer cancel()
+	out, err := z.run(ctx, hostname, z.config().zfsBin, "get", "-H", "-p", "-o", "value", key, name)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func (z *zfsImpl) ListSnapshots(dataset *Dataset) ([]string, error) {
+	if err := validateDataset(dataset); err != nil {
+		return nil, err
+	}
+	ctx, cancel := opCtx()
+	defer cancel()
+	out, err := z.run(ctx, dataset.Hostname, z.config().zfsBin, "list", "-H", "-t", "snapshot", "-o", "name", "-r", dataset.Name)
+	if err != nil {
+		if IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var snaps []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			snaps = append(snaps, line)
+		}
+	}
+	return snaps, nil
+}
+
+// ParseAvailableBytes parses `zfs get -Hp available` output ("12345" or "none").
+func ParseAvailableBytes(v string) (int64, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" || v == "-" || strings.EqualFold(v, "none") {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || n < 0 {
+		return 0, false
+	}
+	return n, true
 }
 
 func validateDataset(dataset *Dataset) error {

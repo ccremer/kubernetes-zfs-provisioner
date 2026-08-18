@@ -3,6 +3,7 @@ package zfs
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -22,8 +23,22 @@ func runLocal(ctx context.Context, binPrefix []string, args ...string) ([]byte, 
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return stdout.Bytes(), fmt.Errorf("local %q: %w: %s",
-			strings.Join(append([]string{binPrefix[0]}, full...), " "), err, strings.TrimSpace(stderr.String()))
+		re := &RunError{
+			Op:     "local " + strings.Join(append([]string{binPrefix[0]}, full...), " "),
+			Host:   "localhost",
+			Err:    err,
+			Stderr: strings.TrimSpace(stderr.String()),
+			Exit:   -1,
+			Ran:    true,
+		}
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			re.Exit = ee.ExitCode()
+		} else if ctx.Err() != nil {
+			re.Ran = false
+			re.Err = ctx.Err()
+		}
+		return stdout.Bytes(), re
 	}
 	return stdout.Bytes(), nil
 }

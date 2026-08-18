@@ -30,6 +30,8 @@ func (f *fakeRunner) run(_ context.Context, _ string, _ []string, args ...string
 		return nil, f.onDestroy
 	case "list":
 		return []byte(f.listOut), f.listErr
+	case "set":
+		return nil, nil
 	}
 	return nil, errors.New("unexpected: " + args[0])
 }
