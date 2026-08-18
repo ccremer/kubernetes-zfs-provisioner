@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/norwoodj/helm-docs v1.14.2
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	k8s.io/api v0.36.3
 )
 
@@ -105,7 +105,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/pquerna/otp v1.4.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
