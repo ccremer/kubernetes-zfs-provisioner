@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"fmt"
+
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	storagev1 "k8s.io/api/storage/v1"
 
@@ -27,6 +30,7 @@ func TestProvisionNfs(t *testing.T) {
 		Mountpoint: "/" + expectedDatasetName,
 	}
 	stub := new(zfsStub)
+	stub.On("GetProperty", "test/volumes", expectedHost, "available").Return("999999999999", nil)
 	stub.On("CreateDataset", expectedDatasetName, map[string]string{
 		RefQuotaProperty:       "1000000000",
 		RefReservationProperty: "1000000000",
@@ -70,7 +74,7 @@ func TestProvisionNfs(t *testing.T) {
 func assertBasics(t *testing.T, stub *zfsStub, pv *v1.PersistentVolume, expectedDataset string, expectedHost string) {
 	stub.AssertExpectations(t)
 
-	assert.Contains(t, pv.Annotations, "my/annotation")
+	assert.NotContains(t, pv.Annotations, "my/annotation", "PVC annotations must not leak onto the PV")
 	assert.Equal(t, expectedDataset, pv.Annotations[DatasetPathAnnotation])
 	assert.Equal(t, expectedHost, pv.Annotations[ZFSHostAnnotation])
 }
@@ -85,6 +89,7 @@ func TestProvisionHostPath(t *testing.T) {
 	expectedHost := "host"
 	policy := v1.PersistentVolumeReclaimRetain
 	stub := new(zfsStub)
+	stub.On("GetProperty", "test/volumes", expectedHost, "available").Return("999999999999", nil)
 	stub.On("CreateDataset", expectedDatasetName, map[string]string{
 		RefQuotaProperty:       "1000000000",
 		RefReservationProperty: "1000000000",
@@ -146,4 +151,154 @@ func newClaim(capacity resource.Quantity, accessModes []v1.PersistentVolumeAcces
 		Status: v1.PersistentVolumeClaimStatus{},
 	}
 	return claim
+}
+
+func TestProvisionDoesNotMutatePVC(t *testing.T) {
+	expectedDataset := &zfs.Dataset{Name: "tank/volumes/pv-x", Hostname: "nas-1", Mountpoint: "/tank/volumes/pv-x"}
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).Return(expectedDataset, nil)
+	stub.On("SetPermissions", expectedDataset).Return(nil)
+	p, _ := NewZFSProvisionerStub(stub)
+	pvc := newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce})
+	origLen := len(pvc.Annotations)
+	_, _, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName: "pv-x",
+		PVC:    pvc,
+		StorageClass: &storagev1.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{Name: "zfs"},
+			Parameters: map[string]string{
+				ParentDatasetParameter: "tank/volumes",
+				HostnameParameter:      "nas-1",
+				TypeParameter:          "nfs",
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, origLen, len(pvc.Annotations), "Provision must not mutate the PVC from the informer cache")
+	assert.NotContains(t, pvc.Annotations, DatasetPathAnnotation)
+}
+
+func TestProvisionRetriesTransientCreate(t *testing.T) {
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).
+		Return((*zfs.Dataset)(nil), fmt.Errorf("ssh dial nas-1: connection refused"))
+	p, _ := NewZFSProvisionerStub(stub)
+	_, state, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName: "pv-x",
+		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "nfs",
+		}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, controller.ProvisioningInBackground, state)
+}
+
+func TestProvisionFinishedOnPermissionDenied(t *testing.T) {
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).
+		Return((*zfs.Dataset)(nil), fmt.Errorf("cannot create: permission denied"))
+	p, _ := NewZFSProvisionerStub(stub)
+	_, state, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName: "pv-x",
+		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "nfs",
+		}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, controller.ProvisioningFinished, state)
+}
+
+func TestProvisionRetriesChmodFailure(t *testing.T) {
+	ds := &zfs.Dataset{Name: "tank/volumes/pv-x", Hostname: "nas-1", Mountpoint: "/tank/volumes/pv-x"}
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).Return(ds, nil)
+	stub.On("SetPermissions", ds).Return(fmt.Errorf("ssh dial nas-1: i/o timeout"))
+	p, _ := NewZFSProvisionerStub(stub)
+	_, state, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName: "pv-x",
+		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "nfs",
+		}},
+	})
+	require.Error(t, err)
+	assert.Equal(t, controller.ProvisioningInBackground, state)
+}
+
+func TestProvisionInsufficientCapacity(t *testing.T) {
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("100", nil)
+	p, _ := NewZFSProvisionerStub(stub)
+	_, state, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName: "pv-x",
+		PVC:    newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "nfs",
+		}},
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insufficient capacity")
+	assert.Equal(t, controller.ProvisioningFinished, state)
+	stub.AssertNotCalled(t, "CreateDataset", mock.Anything, mock.Anything)
+}
+
+func TestProvisionAutoUsesHostPathWhenScheduledOnZFSNode(t *testing.T) {
+	ds := &zfs.Dataset{Name: "tank/volumes/pv-x", Hostname: "nas-1", Mountpoint: "/tank/volumes/pv-x"}
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).Return(ds, nil)
+	stub.On("SetPermissions", ds).Return(nil)
+	p, _ := NewZFSProvisionerStub(stub)
+	pv, _, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName:           "pv-x",
+		SelectedNodeName: "k8s-nas-1",
+		PVC:              newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadWriteMany}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "auto",
+			NodeNameParameter:      "k8s-nas-1",
+		}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, pv.Spec.HostPath)
+	require.Nil(t, pv.Spec.NFS)
+}
+
+func TestProvisionAutoUsesNFSWhenScheduledElsewhere(t *testing.T) {
+	ds := &zfs.Dataset{Name: "tank/volumes/pv-x", Hostname: "nas-1", Mountpoint: "/tank/volumes/pv-x"}
+	stub := new(zfsStub)
+	stub.On("GetProperty", "tank/volumes", "nas-1", "available").Return("999999999999", nil)
+	stub.On("CreateDataset", "tank/volumes/pv-x", mock.Anything).Return(ds, nil)
+	stub.On("SetPermissions", ds).Return(nil)
+	p, _ := NewZFSProvisionerStub(stub)
+	pv, _, err := p.Provision(context.Background(), controller.ProvisionOptions{
+		PVName:           "pv-x",
+		SelectedNodeName: "worker-7",
+		PVC:              newClaim(resource.MustParse("1G"), []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce}),
+		StorageClass: &storagev1.StorageClass{Parameters: map[string]string{
+			ParentDatasetParameter: "tank/volumes",
+			HostnameParameter:      "nas-1",
+			TypeParameter:          "auto",
+			NodeNameParameter:      "k8s-nas-1",
+		}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, pv.Spec.NFS)
+	require.Nil(t, pv.Spec.HostPath)
+	require.Nil(t, pv.Spec.NodeAffinity)
 }

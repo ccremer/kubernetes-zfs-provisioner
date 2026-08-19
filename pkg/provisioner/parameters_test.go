@@ -91,6 +91,28 @@ func TestNewStorageClassParameters(t *testing.T) {
 			want: &ZFSStorageClassParameters{NFSShareProperties: "on"},
 		},
 		{
+			name: "GivenWrongSpec_WhenParentHasShellChars_ThenThrowError",
+			args: args{
+				parameters: map[string]string{
+					ParentDatasetParameter: "tank/$(id)",
+					HostnameParameter:      "host",
+					TypeParameter:          "nfs",
+				},
+			},
+			errContains: ParentDatasetParameter,
+		},
+		{
+			name: "GivenWrongSpec_WhenHostnameHasSpaces_ThenThrowError",
+			args: args{
+				parameters: map[string]string{
+					ParentDatasetParameter: "tank/volumes",
+					HostnameParameter:      "bad host",
+					TypeParameter:          "nfs",
+				},
+			},
+			errContains: HostnameParameter,
+		},
+		{
 			name: "GivenCorrectSpec_WhenTypeHostPath_ThenReturnHostPathParameters",
 			args: args{
 				parameters: map[string]string{
