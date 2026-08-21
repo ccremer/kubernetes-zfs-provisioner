@@ -11,7 +11,7 @@ image:
   # -- Container image registry
   registry: ghcr.io
   # -- Pin an exact release tag so the chart maps 1:1 to a known image build.
-  tag: v1.6.0
+  tag: v1.6.1
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
