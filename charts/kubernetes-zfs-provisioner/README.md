@@ -1,6 +1,6 @@
 # kubernetes-zfs-provisioner
 
-![Version: 2.3.0](https://img.shields.io/badge/Version-2.3.0-informational?style=flat-square)
+![Version: 2.4.0](https://img.shields.io/badge/Version-2.4.0-informational?style=flat-square)
 
 Dynamic ZFS persistent volume provisioner for Kubernetes
 
@@ -28,27 +28,38 @@ Document your changes in values.yaml and let `make docs:helm` generate this sect
 |-----|------|---------|-------------|
 | affinity | object | `{}` |  |
 | env | object | `{}` | A dict with KEY: VALUE pairs passed to the provisioner as environment variables. Use it to tune the SSH connection, e.g. `ZFS_SSH_HOSTKEY_TOFU: "true"` or `ZFS_SSH_PORT: "2222"`. See the [provisioner README](https://github.com/ccremer/kubernetes-zfs-provisioner#ssh-connection) for the full list. |
+| extraVolumeMounts | list | `[]` | Extra volume mounts for the provisioner container |
+| extraVolumes | list | `[]` | Extra volumes mounted into the provisioner container (e.g. local mock root) |
 | fullnameOverride | string | `""` |  |
 | hostAliases | object | `{}` | A dict with `{ip, hostnames array}` to configure custom entries in /etc/hosts. See [values.yaml](./values.yaml) for an example. |
-| image.pullPolicy | string | `"Always"` |  |
+| image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` | Container image registry |
 | image.repository | string | `"ccremer/zfs-provisioner"` | Location of the container image |
-| image.tag | string | `"v1"` | Container image tag |
+| image.tag | string | `"v1.6.0"` | Pin an exact release tag so the chart maps 1:1 to a known image build. |
 | imagePullSecrets | list | `[]` |  |
+| metrics.port | int | `8080` |  |
+| metrics.service.enabled | bool | `true` | Expose /metrics on a ClusterIP Service |
 | nameOverride | string | `""` |  |
 | nodeSelector | object | `{}` | Reminder: This has no effect on any PVs, but maybe you want the provisioner pod running on certain nodes. |
-| podSecurityContext | object | `{}` | If you encounter **issues with SSH, set `podSecurityContext.fsGroup=100`**, as the SSH files might not be readable to the container user `zfs` with uid 100. |
+| podDisruptionBudget.enabled | bool | `true` |  |
+| podDisruptionBudget.minAvailable | int | `1` | Minimum available replicas. Ignored when replicaCount equals 1, since the PDB is only rendered for replicaCount greater than 1. |
+| podSecurityContext | object | `{"fsGroup":100}` | If you encounter **issues with SSH, set `podSecurityContext.fsGroup=100`**, as the SSH files might not be readable to the container user `zfs` with uid 100. |
+| priorityClassName | string | `""` | Optional PriorityClass for the provisioner pod |
 | provisioner.instance | string | `"pv.kubernetes.io/zfs"` | Provisoner instance name if multiple are running (multiple instances are not required for managing multiple ZFS hosts) |
-| rbac.create | bool | `false` | **Required for first time deployments** Grant the service account the necessary permissions, |
-| replicaCount | int | `1` | Usually `1` is fine |
-| resources.limits.memory | string | `"40Mi"` |  |
+| rbac.create | bool | `true` | Grant the service account the necessary cluster permissions. |
+| replicaCount | int | `1` | 1 is enough (leader election). Use 2 for HA together with a PDB. |
+| resources.limits.memory | string | `"256Mi"` |  |
 | resources.requests.cpu | string | `"50m"` |  |
-| resources.requests.memory | string | `"20Mi"` |  |
-| securityContext | object | `{}` |  |
+| resources.requests.memory | string | `"64Mi"` |  |
+| securityContext.allowPrivilegeEscalation | bool | `false` |  |
+| securityContext.capabilities.drop[0] | string | `"ALL"` |  |
+| securityContext.readOnlyRootFilesystem | bool | `true` |  |
+| securityContext.runAsNonRoot | bool | `true` |  |
+| securityContext.runAsUser | int | `100` |  |
 | serviceAccount.annotations | object | `{}` | Annotations to add to the service account |
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
-| ssh.config | string | `""` | **Required.** ssh_config(5)-compatible file content to configure SSH options when connecting |
+| ssh.config | string | `""` | Optional ssh_config(5). Only `User` and `Port` are honoured by the native client. Per-host IdentityFile is not read; set `ZFS_SSH_KEY` or use a standard key name. |
 | ssh.externalSecretName | string | `""` | If SSH secrets are managed externally, specify the name |
 | ssh.identities | object | `{}` | **Required.** Provide a private key for each SSH identity. See [values.yaml](./values.yaml) for an example |
 | ssh.knownHosts | list | `[]` | **Required** unless `env.ZFS_SSH_HOSTKEY_TOFU` is `"true"`. List of {host, pubKey} dicts with the public key of each ZFS host. Host keys are verified strictly by default; set `env.ZFS_SSH_HOSTKEY_TOFU: "true"` to pin unknown host keys on first use instead. |

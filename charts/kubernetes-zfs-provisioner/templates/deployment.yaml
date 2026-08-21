@@ -7,6 +7,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- if le (int .Values.replicaCount) 1 }}
+    type: Recreate
+    {{- else }}
+    type: RollingUpdate
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 6 }}
@@ -14,6 +20,8 @@ spec:
     metadata:
       labels:
         {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/ssh: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
     {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -22,6 +30,9 @@ spec:
       serviceAccountName: {{ include "kubernetes-zfs-provisioner.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
+      {{- end }}
       containers:
         - name: provisioner
           securityContext:
@@ -30,19 +41,39 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: ZFS_PROVISIONER_INSTANCE
-              value: {{ .Values.provisioner.instance }}
+              value: {{ .Values.provisioner.instance | quote }}
+            - name: ZFS_SSH_MOUNT_PATH
+              value: {{ .Values.ssh.mountPath | quote }}
           {{- with .Values.env }}
           {{- range $key, $value := . }}
             - name: {{ $key }}
-              value: {{ $value }}
+              value: {{ $value | quote }}
           {{- end }}
           {{- end }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.metrics.port | default 8080 }}
+            - name: health
+              containerPort: {{ add (.Values.metrics.port | default 8080) 1 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 2
+            periodSeconds: 5
           volumeMounts:
             - name: ssh
               mountPath: {{ .Values.ssh.mountPath }}
+              readOnly: true
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.hostAliases }}
@@ -61,6 +92,9 @@ spec:
           secret:
             secretName: {{ include "kubernetes-zfs-provisioner.secretName" $ }}
             defaultMode: 0600
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
