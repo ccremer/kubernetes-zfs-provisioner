@@ -71,6 +71,6 @@ jobs:
       # there doesn't seem to be any maintained GitHub actions that allow uploading assets after release has been made.
       - name: Update release
         run: |
-          gh release edit ${CHART_NAME}-${CHART_VERSION} --notes-file .github/release-notes.md
+          gh release edit ${CHART_NAME}-${CHART_VERSION} --notes-file .github/release-notes.md --tag chart/${CHART_NAME}-${CHART_VERSION}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
