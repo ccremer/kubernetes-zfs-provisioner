@@ -7,10 +7,12 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.replicaCount }}
-  {{- if le (int .Values.replicaCount) 1 }}
   strategy:
+    {{- if le (int .Values.replicaCount) 1 }}
     type: Recreate
-  {{- end }}
+    {{- else }}
+    type: RollingUpdate
+    {{- end }}
   selector:
     matchLabels:
       {{- include "kubernetes-zfs-provisioner.selectorLabels" . | nindent 6 }}

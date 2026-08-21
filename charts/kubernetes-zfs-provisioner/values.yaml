@@ -10,8 +10,8 @@ image:
   repository: ccremer/zfs-provisioner
   # -- Container image registry
   registry: ghcr.io
-  # -- Pin a release tag in production. `v1` is a moving major tag.
-  tag: v1
+  # -- Pin an exact release tag so the chart maps 1:1 to a known image build.
+  tag: v1.6.0
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -137,6 +137,7 @@ metrics:
 
 podDisruptionBudget:
   enabled: true
+  # -- Minimum available replicas. Ignored when replicaCount equals 1, since the PDB is only rendered for replicaCount greater than 1.
   minAvailable: 1
 
 # -- Optional PriorityClass for the provisioner pod

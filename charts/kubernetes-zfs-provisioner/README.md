@@ -35,14 +35,14 @@ Document your changes in values.yaml and let `make docs:helm` generate this sect
 | image.pullPolicy | string | `"IfNotPresent"` |  |
 | image.registry | string | `"ghcr.io"` | Container image registry |
 | image.repository | string | `"ccremer/zfs-provisioner"` | Location of the container image |
-| image.tag | string | `"v1"` | Pin a release tag in production. `v1` is a moving major tag. |
+| image.tag | string | `"v1.6.0"` | Pin an exact release tag so the chart maps 1:1 to a known image build. |
 | imagePullSecrets | list | `[]` |  |
 | metrics.port | int | `8080` |  |
 | metrics.service.enabled | bool | `true` | Expose /metrics on a ClusterIP Service |
 | nameOverride | string | `""` |  |
 | nodeSelector | object | `{}` | Reminder: This has no effect on any PVs, but maybe you want the provisioner pod running on certain nodes. |
 | podDisruptionBudget.enabled | bool | `true` |  |
-| podDisruptionBudget.minAvailable | int | `1` |  |
+| podDisruptionBudget.minAvailable | int | `1` | Minimum available replicas. Ignored when replicaCount equals 1, since the PDB is only rendered for replicaCount greater than 1. |
 | podSecurityContext | object | `{"fsGroup":100}` | If you encounter **issues with SSH, set `podSecurityContext.fsGroup=100`**, as the SSH files might not be readable to the container user `zfs` with uid 100. |
 | priorityClassName | string | `""` | Optional PriorityClass for the provisioner pod |
 | provisioner.instance | string | `"pv.kubernetes.io/zfs"` | Provisoner instance name if multiple are running (multiple instances are not required for managing multiple ZFS hosts) |
