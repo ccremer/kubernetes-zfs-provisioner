@@ -6,7 +6,7 @@ require (
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/norwoodj/helm-docs v1.14.2
 	github.com/stretchr/testify v1.12.1
-	k8s.io/api v0.36.4
+	k8s.io/api v0.37.1
 )
 
 require (
